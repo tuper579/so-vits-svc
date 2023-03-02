@@ -1,5 +1,14 @@
+# SoftVC VITS Singing Voice Conversion
+
 ## Model Overview
 A singing voice coversion (SVC) model, using the SoftVC encoder to extract features from the input audio, sent into VITS along with the F0 to replace the original input to acheive a voice conversion effect. Additionally, changing the vocoder to [NSF HiFiGAN](https://github.com/openvpi/DiffSinger/tree/refactor/modules/nsf_hifigan) to fix the issue with unwanted staccato.
+
+## Notice
+* Note: 3.0 models are not compatible with 4.0.
+* This is a fork of the 4.0 branch of so-vits-svc. It implements
+  the same inference GUI as found in the `eff` branch of this
+  repository, with a few extra features relating to 4.0 models
+  (such as automatic pitch prediction and clustering). For instructions on using the GUI see the `eff` [branch](https://github.com/effusiveperiscope/so-vits-svc/tree/eff)
 
 ### 4.0 Features
 + Feature input replaced with [Content Vec](https://github.com/auspicious3000/contentvec) 
@@ -26,6 +35,8 @@ wget -P logs/44k/ https://huggingface.co/innnky/sovits_pretrained/resolve/main/s
 ```
 
 ## Colab notebook scripts
+
+[Colab training notebook (EN)](https://colab.research.google.com/drive/1laRNiMSgSw_SxSnuti8oWIuC--RHzAGp?usp=sharing)
 
 Note that the following notebooks are not maintained by me.
 
@@ -70,7 +81,8 @@ Note: The old model will be automatically cleared during training, and only the 
 To train a cluster model, train a so-vits-svc 4.0 model first (as above), then execute `python cluster/train_cluster.py`.
 
 ## Inference
-Use [inference_main.py](inference_main.py)
+For instructions on using the GUI see the `eff` [branch](https://github.com/effusiveperiscope/so-vits-svc/tree/eff)
+Otherwise use [inference_main.py](inference_main.py)
 Command line support has been added for inference
 
 ```shell
