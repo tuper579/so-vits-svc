@@ -696,6 +696,8 @@ class InferenceGui2 (QMainWindow):
         self.talknet_file_button.clicked.connect(self.talknet_file_dialog)
         self.talknet_file_button.fileDropped.connect(self.talknet_update_file)
 
+        self.talknet_output_path = None
+
         self.talknet_input_preview = AudioPreviewWidget()
         self.talknet_lay.addWidget(self.talknet_input_preview)
         
@@ -721,7 +723,10 @@ class InferenceGui2 (QMainWindow):
         self.talknet_lay.addWidget(self.talknet_transcript_label)
         self.talknet_lay.addWidget(self.talknet_transcript_edit)
 
-        self.talknet_sovits = QCheckBox("Push TalkNet output to so-vits-svc")
+        self.talknet_dra = QCheckBox("Disable reference audio")
+        self.talknet_lay.addWidget(self.talknet_dra)
+
+        self.talknet_sovits = QCheckBox("Auto push TalkNet output to so-vits-svc")
         self.talknet_lay.addWidget(self.talknet_sovits)
 
         self.talknet_gen_button = QPushButton("Generate")
@@ -732,6 +737,11 @@ class InferenceGui2 (QMainWindow):
         self.talknet_output_info.setWordWrap(True)
         self.talknet_lay.addWidget(self.talknet_gen_button)
         self.talknet_lay.addWidget(self.talknet_output_info)
+
+        self.talknet_manual = QPushButton(
+            "Manual push TalkNet output to so-vits-svc section")
+        self.talknet_lay.addWidget(self.talknet_manual)
+        self.talknet_manual.clicked.connect(self.talknet_man_push_sovits)
 
         self.talknet_output_preview = AudioPreviewWidget()
         self.talknet_sovits_output_preview = AudioPreviewWidget()
@@ -753,7 +763,12 @@ class InferenceGui2 (QMainWindow):
     def talknet_character_load(self, k):
         self.cur_talknet_char = k
 
-    # Really, it can just drop packets inside the machine?
+    def talknet_man_push_sovits(self):
+        if self.talknet_output_path is None or not os.path.exists(self.talknet_output_path):
+            return
+        self.clean_files = [self.talknet_output_path]
+        self.update_file_label()
+        self.update_input_preview()
 
     def talknet_generate_request(self):
         req_time = datetime.now().strftime("%H:%M:%S")
@@ -762,7 +777,8 @@ class InferenceGui2 (QMainWindow):
                 'wav':self.talknet_file,
                 'transpose':int(self.talknet_transpose_num.text()),
                 'transcript':self.talknet_transcript_edit.toPlainText(),
-                'results_dir':self.output_dir}),
+                'results_dir':self.output_dir,
+                'disable_reference_audio':self.talknet_dra.isChecked()}),
              headers={'Content-Type':'application/json'})
         if response.status_code != 200:
             print("TalkNet generate request failed.")
@@ -778,6 +794,7 @@ class InferenceGui2 (QMainWindow):
         self.talknet_output_preview.from_file(res.get("output_path"))
         self.talknet_output_preview.set_text("Preview - "+res.get(
             "output_path","N/A"))
+        self.talknet_output_path = res.get("output_path")
         if self.talknet_sovits.isChecked():
             self.talknet_output_preview.from_file(sovits_res_path)
             self.talknet_output_preview.set_text("Preview - "+
