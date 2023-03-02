@@ -118,6 +118,9 @@ class Svc(object):
         self.target_sample = self.hps_ms.data.sampling_rate
         self.hop_size = self.hps_ms.data.hop_length
         self.spk2id = self.hps_ms.spk
+        self.use_old_f0 = False
+        self.voice_threshold = 0.3
+
         # 加载hubert
         self.hubert_model = utils.get_hubert_model().to(self.dev)
         self.load_model()
@@ -142,7 +145,10 @@ class Svc(object):
 
         wav, sr = librosa.load(in_path, sr=self.target_sample)
 
-        f0 = utils.compute_f0_parselmouth(wav, sampling_rate=self.target_sample, hop_length=self.hop_size)
+        if self.use_old_f0:
+            f0 = utils.compute_f0_parselmouth(wav, sampling_rate=self.target_sample, hop_length=self.hop_size, voice_thresh=self.voice_threshold)
+        else:
+            f0 = utils.compute_f0_parselmouth_alt(wav, sampling_rate=self.target_sample, hop_length=self.hop_size, voice_thresh=self.voice_threshold)
         f0, uv = utils.interpolate_f0(f0)
         f0 = torch.FloatTensor(f0)
         uv = torch.FloatTensor(uv)

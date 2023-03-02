@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     checkpoint_dir = args.output
     dataset = args.dataset
-    n_clusters = 10000
+    n_clusters = 4000
 
     ckpt = {}
     for spk in os.listdir(dataset):

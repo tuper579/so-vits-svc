@@ -126,7 +126,8 @@ def interpolate_f0(f0):
     return ip_data[:,0], vuv_vector[:,0]
 
 
-def compute_f0_parselmouth(wav_numpy, p_len=None, sampling_rate=44100, hop_length=512):
+def compute_f0_parselmouth(wav_numpy, p_len=None, sampling_rate=44100, hop_length=512,
+    voice_thresh = 0.6):
     import parselmouth
     x = wav_numpy
     if p_len is None:
@@ -137,8 +138,28 @@ def compute_f0_parselmouth(wav_numpy, p_len=None, sampling_rate=44100, hop_lengt
     f0_min = 50
     f0_max = 1100
     f0 = parselmouth.Sound(x, sampling_rate).to_pitch_ac(
-        time_step=time_step / 1000, voicing_threshold=0.6,
+        time_step=time_step / 1000, voicing_threshold=voice_thresh,
         pitch_floor=f0_min, pitch_ceiling=f0_max).selected_array['frequency']
+
+    pad_size=(p_len - len(f0) + 1) // 2
+    if(pad_size>0 or p_len - len(f0) - pad_size>0):
+        f0 = np.pad(f0,[[pad_size,p_len - len(f0) - pad_size]], mode='constant')
+    return f0
+
+def compute_f0_parselmouth_alt(wav_numpy, p_len=None, sampling_rate=44100,
+    hop_length=512, voice_thresh = 0.3):
+    import parselmouth
+    x = wav_numpy
+    if p_len is None:
+        p_len = x.shape[0]//hop_length
+    else:
+        assert abs(p_len-x.shape[0]//hop_length) < 4, "pad length error"
+    time_step = hop_length / sampling_rate * 1000
+    f0_min = 50
+    f0_max = 1100
+    f0 = parselmouth.Sound(x, sampling_rate).to_pitch_cc(
+        time_step=time_step / 1000, voicing_threshold=voice_thresh,
+        pitch_floor=75, pitch_ceiling=1100).selected_array['frequency']
 
     pad_size=(p_len - len(f0) + 1) // 2
     if(pad_size>0 or p_len - len(f0) - pad_size>0):
@@ -362,7 +383,7 @@ def load_wav_to_torch(full_path):
 
 
 def load_filepaths_and_text(filename, split="|"):
-  with open(filename, encoding='utf-8') as f:
+  with open(filename, encoding='utf-8') as f: 
     filepaths_and_text = [line.strip().split(split) for line in f]
   return filepaths_and_text
 
