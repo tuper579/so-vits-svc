@@ -539,7 +539,7 @@ class InferenceGui2 (QMainWindow):
         self.cluster_label = QLabel("Clustering ratio (0 = none)")
         self.cluster_infer_ratio = QLineEdit('0.0')
         self.cluster_infer_ratio.setValidator(self.cluster_ratio_validator)
-        self.cluster_path = None
+        self.cluster_path = ""
         self.sovits_lay.addWidget(self.cluster_switch)
         self.sovits_lay.addWidget(self.cluster_label)
         self.sovits_lay.addWidget(self.cluster_infer_ratio)
@@ -829,7 +829,7 @@ class InferenceGui2 (QMainWindow):
         self.speaker = self.speakers[index]
         print ("Loading "+self.speakers[index]["name"])
         self.cluster_path = self.speakers[index]["cluster_path"]
-        if self.cluster_path is None:
+        if self.cluster_path == "":
             self.cluster_switch.setCheckState(False)
             self.cluster_switch.setEnabled(False)
         else:
@@ -840,7 +840,7 @@ class InferenceGui2 (QMainWindow):
 
     def talknet_file_dialog(self):
         self.talknet_update_file(
-            QFileDialog.getOpenFileName(self, "File to process")[0])
+            QFileDialog.getOpenFileName(self, "File to process"))
 
     def talknet_update_preview(self):
         self.talknet_input_preview.from_file(self.talknet_file)
