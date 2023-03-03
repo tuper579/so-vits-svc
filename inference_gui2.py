@@ -84,12 +84,13 @@ def get_speakers():
                 print("Skipping "+folder+", no G_*.pth")
                 continue
             cur_speaker["model_path"] = g[0]
+            cur_speaker["model_folder"] = folder
 
             # Look for *.pt (clustering model)
             clst = glob.glob(os.path.join(MODELS_DIR,folder,'*.pt'))
             if not len(clst):
                 print("No clustering model found for "+folder)
-                cur_speaker["cluster_path"] = None
+                cur_speaker["cluster_path"] = ""
             else:
                 cur_speaker["cluster_path"] = clst[0]
 
@@ -492,7 +493,8 @@ class InferenceGui2 (QMainWindow):
         
         self.speaker_box = QComboBox()
         for spk in self.speakers:
-            self.speaker_box.addItem(spk["name"])
+            self.speaker_box.addItem(spk["name"]+" ["+
+                Path(spk["model_folder"]).stem+"]")
         self.speaker_label = QLabel("Speaker:")
         self.sovits_lay.addWidget(self.speaker_label)
         self.sovits_lay.addWidget(self.speaker_box)
