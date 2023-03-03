@@ -217,14 +217,17 @@ class AudioPreviewWidget(QWidget):
             self.playing_label.hide()
 
     def from_file(self, path):
-        self.player.stop()
-        if hasattr(self, 'audio_buffer'):
-            self.audio_buffer.close()
+        try:
+            self.player.stop()
+            if hasattr(self, 'audio_buffer'):
+                self.audio_buffer.close()
 
-        self.player.setMedia(QMediaContent(QUrl.fromLocalFile(path)))
+            self.player.setMedia(QMediaContent(QUrl.fromLocalFile(path)))
 
-        self.play_button.setIcon(self.style().standardIcon(
-            getattr(QStyle, 'SP_MediaPlay')))
+            self.play_button.setIcon(self.style().standardIcon(
+                getattr(QStyle, 'SP_MediaPlay')))
+        except Exception as e:
+            pass
 
     def from_memory(self, data):
         self.player.stop()
