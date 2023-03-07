@@ -43,7 +43,7 @@ if importlib.util.find_spec("pygame"):
     print("Realtime recording enabled. Press r to record.")
     PYGAME_AVAILABLE = True
 else:
-    print("Pygame is not available.")
+    print("Note: Pygame is not available.")
     PYGAME_AVAILABLE = False
 
 if importlib.util.find_spec("requests"):
@@ -64,7 +64,7 @@ if (subprocess.run(["where","rubberband"] if os.name == "nt" else
     import pyrubberband as pyrb
     RUBBERBAND_AVAILABLE = True
 else:
-    print("Rubberband is not available. Timestretch not available.")
+    print("Note: Rubberband is not available. Timestretch not available.")
     RUBBERBAND_AVAILABLE = False
 
 TALKNET_ADDR = "127.0.0.1:8050"
@@ -89,7 +89,7 @@ def get_speakers():
             # Look for *.pt (clustering model)
             clst = glob.glob(os.path.join(MODELS_DIR,folder,'*.pt'))
             if not len(clst):
-                print("No clustering model found for "+folder)
+                print("Note: No clustering model found for "+folder)
                 cur_speaker["cluster_path"] = ""
             else:
                 cur_speaker["cluster_path"] = clst[0]
@@ -601,8 +601,9 @@ class InferenceGui2 (QMainWindow):
             self.ts_label = QLabel("Timestretch (0.5, 1.0)")
             self.ts_num = QLineEdit('1.0')
             self.ts_num.setValidator(self.timestretch_validator)
-            self.sovits_lay.addWidget(self.ts_label)
-            self.sovits_lay.addWidget(self.ts_num)
+
+            self.ts_frame = FieldWidget(self.ts_label, self.ts_num)
+            self.sovits_lay.addWidget(self.ts_frame)
 
         self.output_button = QPushButton("Change Output Directory")
         self.sovits_lay.addWidget(self.output_button)
