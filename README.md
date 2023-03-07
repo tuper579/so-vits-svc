@@ -38,6 +38,8 @@ wget -P logs/44k/ https://huggingface.co/innnky/sovits_pretrained/resolve/main/s
 
 [Colab training notebook (EN)](https://colab.research.google.com/drive/1laRNiMSgSw_SxSnuti8oWIuC--RHzAGp?usp=sharing)
 
+[Colab inference notebook (EN)](https://colab.research.google.com/drive/1128nhe0empM7u4uo5hbZx5lqjgjG1OSf?usp=sharing)
+
 Note that the following notebooks are not maintained by me.
 
 [![Colab training notebook (CN)](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/19fxpo-ZoL_ShEUeZIZi6Di-YioWrEyhR#scrollTo=0gQcIZ8RsOkn)
