@@ -21,3 +21,4 @@ praat-parselmouth
 onnx
 onnxsim
 onnxoptimizer
+fairseq
