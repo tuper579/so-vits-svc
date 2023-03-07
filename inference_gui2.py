@@ -9,7 +9,7 @@ import copy
 import importlib.util
 from ctypes import cast, POINTER, c_int, c_short, c_float
 from pathlib import Path
-from PyQt5.QtCore import pyqtSignal, Qt, QUrl
+from PyQt5.QtCore import pyqtSignal, Qt, QUrl, QSize
 from PyQt5.QtGui import (QIntValidator, QDoubleValidator, QKeySequence)
 from PyQt5.QtMultimedia import (
    QMediaContent, QAudio, QAudioDeviceInfo, QMediaPlayer, QAudioRecorder,
@@ -141,6 +141,20 @@ infer_tool.mkdir(["raw", "results"])
 slice_db = -40  
 wav_format = 'wav'
 
+class FieldWidget(QFrame):
+    def __init__(self, label, field):
+        super().__init__()
+        self.layout = QHBoxLayout(self)
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0,0,0,0)
+        label.setAlignment(Qt.AlignLeft)
+        self.layout.addWidget(label)
+        field.setAlignment(Qt.AlignRight)
+        field.sizeHint = lambda: QSize(60, 32)
+        field.setSizePolicy(QSizePolicy.Maximum,
+            QSizePolicy.Preferred)
+        self.layout.addWidget(field)
+
 class VSTWidget(QWidget):
     def __init__(self):
         # this should not even be loaded if pedalboard is not available
@@ -178,6 +192,8 @@ class AudioPreviewWidget(QWidget):
     def __init__(self):
         super().__init__()
         self.vlayout = QVBoxLayout(self)
+        self.vlayout.setSpacing(0)
+        self.vlayout.setContentsMargins(0,0,0,0)
 
         self.playing_label = QLabel("Preview")
         self.vlayout.addWidget(self.playing_label)
@@ -186,6 +202,8 @@ class AudioPreviewWidget(QWidget):
         self.vlayout.addWidget(self.player_frame)
 
         self.player_layout = QHBoxLayout(self.player_frame)
+        self.player_layout.setSpacing(4)
+        self.player_layout.setContentsMargins(0,0,0,0)
 
         #self.playing_label.hide()
 
@@ -202,7 +220,7 @@ class AudioPreviewWidget(QWidget):
             getattr(QStyle, 'SP_MediaPlay')))
         self.player_layout.addWidget(self.play_button)
         self.play_button.clicked.connect(self.toggle_play)
-        self.play_button.setSizePolicy(QSizePolicy.Minimum,
+        self.play_button.setSizePolicy(QSizePolicy.Maximum,
             QSizePolicy.Minimum)
 
         self.seek_slider.sliderMoved.connect(self.seek)
@@ -482,6 +500,8 @@ class InferenceGui2 (QMainWindow):
         self.sovits_frame.setTitle("so-vits-svc")
         self.sovits_frame.setStyleSheet("padding:10px")
         self.sovits_lay = QVBoxLayout(self.sovits_frame)
+        self.sovits_lay.setSpacing(0)
+        self.sovits_lay.setContentsMargins(0,0,0,0)
         self.layout.addWidget(self.sovits_frame)
 
         self.load_persist()
@@ -525,14 +545,18 @@ class InferenceGui2 (QMainWindow):
         self.source_transpose_num = QLineEdit('0')
         self.source_transpose_num.setValidator(self.transpose_validator)
         #if PSOLA_AVAILABLE:
-        self.sovits_lay.addWidget(self.source_transpose_label)
-        self.sovits_lay.addWidget(self.source_transpose_num)
+
+        self.source_transpose_frame = FieldWidget(
+            self.source_transpose_label, self.source_transpose_num)
+        self.sovits_lay.addWidget(self.source_transpose_frame)
 
         self.transpose_label = QLabel("Transpose")
-        self.sovits_lay.addWidget(self.transpose_label)
         self.transpose_num = QLineEdit('0')
-        self.sovits_lay.addWidget(self.transpose_num)
         self.transpose_num.setValidator(self.transpose_validator)
+
+        self.transpose_frame = FieldWidget(
+            self.transpose_label, self.transpose_num)
+        self.sovits_lay.addWidget(self.transpose_frame)
 
         self.timestretch_validator = QDoubleValidator(0.5,1.0,1)
         self.cluster_ratio_validator = QDoubleValidator(0.0,1.0,1)
@@ -540,17 +564,21 @@ class InferenceGui2 (QMainWindow):
         self.cluster_switch = QCheckBox("Use clustering")
         self.cluster_label = QLabel("Clustering ratio (0 = none)")
         self.cluster_infer_ratio = QLineEdit('0.0')
-        self.cluster_infer_ratio.setValidator(self.cluster_ratio_validator)
+
+        self.cluster_frame = FieldWidget(
+            self.cluster_label, self.cluster_infer_ratio)
+        self.sovits_lay.addWidget(self.cluster_frame)
+
         self.cluster_path = ""
         self.sovits_lay.addWidget(self.cluster_switch)
-        self.sovits_lay.addWidget(self.cluster_label)
-        self.sovits_lay.addWidget(self.cluster_infer_ratio)
 
         self.noise_scale_label = QLabel("Noise scale")
         self.noise_scale = QLineEdit('0.4')
         self.noise_scale.setValidator(self.cluster_ratio_validator)
-        self.sovits_lay.addWidget(self.noise_scale_label)
-        self.sovits_lay.addWidget(self.noise_scale)
+
+        self.noise_frame = FieldWidget(
+            self.noise_scale_label, self.noise_scale)
+        self.sovits_lay.addWidget(self.noise_frame)
 
 
         self.pred_switch = QCheckBox("Automatic f0 prediction (disable for singing)")
@@ -561,12 +589,13 @@ class InferenceGui2 (QMainWindow):
         self.f0_switch.stateChanged.connect(self.update_f0_switch)
 
         self.thresh_label = QLabel("Voicing threshold")
-        self.sovits_lay.addWidget(self.thresh_label)
         self.voice_validator = QDoubleValidator(0.1,0.9,1)
         self.voice_threshold = QLineEdit('0.3')
         self.voice_threshold.setValidator(self.voice_validator)
         self.voice_threshold.textChanged.connect(self.update_voice_thresh)
-        self.sovits_lay.addWidget(self.voice_threshold)
+
+        self.thresh_frame = FieldWidget(self.thresh_label, self.voice_threshold)
+        self.sovits_lay.addWidget(self.thresh_frame)
 
         if RUBBERBAND_AVAILABLE:
             self.ts_label = QLabel("Timestretch (0.5, 1.0)")
