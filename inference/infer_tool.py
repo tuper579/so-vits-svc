@@ -127,6 +127,10 @@ class Svc(object):
         if os.path.exists(cluster_model_path):
             self.cluster_model = cluster.get_cluster_model(cluster_model_path)
 
+    def hotload_cluster(self, cluster_model_path):
+        if os.path.exists(cluster_model_path):
+            self.cluster_model = cluster.get_cluster_model(cluster_model_path)
+
     def load_model(self):
         # 获取模型配置
         self.net_g_ms = SynthesizerTrn(

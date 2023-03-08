@@ -489,7 +489,7 @@ class InferenceGui2 (QMainWindow):
         self.cached_file_dir = os.path.abspath(".")
         self.recent_dirs = deque(maxlen=RECENT_DIR_MAXLEN)
 
-        self.svc_model = []
+        self.svc_model = None
 
         self.setWindowTitle("so-vits-svc 4.0 GUI")
         self.central_widget = QFrame()
@@ -568,6 +568,12 @@ class InferenceGui2 (QMainWindow):
         self.cluster_frame = FieldWidget(
             self.cluster_label, self.cluster_infer_ratio)
         self.sovits_lay.addWidget(self.cluster_frame)
+
+        self.cluster_button = QPushButton("Select custom cluster model...")
+        self.cluster_label = QLabel("Current cluster model: ")
+        self.sovits_lay.addWidget(self.cluster_button)
+        self.sovits_lay.addWidget(self.cluster_label)
+        self.cluster_button.clicked.connect(self.cluster_model_dialog)
 
         self.cluster_path = ""
         self.sovits_lay.addWidget(self.cluster_switch)
@@ -655,6 +661,9 @@ class InferenceGui2 (QMainWindow):
         self.update_file_label()
         dir_path = os.path.abspath(os.path.dirname(self.clean_files[0]))
         if not dir_path in self.recent_dirs:
+            self.recent_dirs.appendleft(dir_path)
+        else:
+            self.recent_dirs.remove(dir_path)
             self.recent_dirs.appendleft(dir_path)
         self.recent_combo.setCurrentIndex(self.recent_dirs.index(dir_path))
         self.update_input_preview()
@@ -858,6 +867,12 @@ class InferenceGui2 (QMainWindow):
         self.update_file_label()
 
     def try_load_speaker(self, index):
+        load_model = False
+        if (self.speaker.get("model_path") is None or
+            self.speakers[index]["model_path"] !=
+            self.speaker["model_path"]):
+                load_model = True
+
         self.speaker = self.speakers[index]
         print ("Loading "+self.speakers[index]["name"])
         self.cluster_path = self.speakers[index]["cluster_path"]
@@ -866,9 +881,24 @@ class InferenceGui2 (QMainWindow):
             self.cluster_switch.setEnabled(False)
         else:
             self.cluster_switch.setEnabled(True)
-        self.svc_model = Svc(self.speakers[index]["model_path"],
-            self.speakers[index]["cfg_path"],
-            cluster_model_path=self.cluster_path)
+        self.cluster_label.setText("Current cluster model: "+self.cluster_path)       
+
+        if load_model:
+            self.svc_model = Svc(self.speakers[index]["model_path"],
+                self.speakers[index]["cfg_path"],
+                cluster_model_path=self.cluster_path)
+
+    def cluster_model_dialog(self):
+        file_tup = QFileDialog.getOpenFileName(self, "Cluster model file")
+        if file_tup is None or not len(file_tup) or not os.path.exists(
+            file_tup[0]):
+            return
+        if self.svc_model is None:
+            return
+        self.svc_model.hotload_cluster(file_tup[0])
+        self.cluster_path = file_tup[0]
+        self.cluster_label.setText("Current cluster model: "+
+            self.cluster_path)       
 
     def talknet_file_dialog(self):
         self.talknet_update_file(
@@ -887,17 +917,20 @@ class InferenceGui2 (QMainWindow):
         dir_path = os.path.abspath(os.path.dirname(self.talknet_file))
         if not dir_path in self.recent_dirs:
             self.recent_dirs.appendleft(dir_path)
+        else:
+            self.recent_dirs.remove(dir_path)
+            self.recent_dirs.appendleft(dir_path)
         self.recent_combo.setCurrentIndex(self.recent_dirs.index(dir_path))
         self.update_recent_combo()
 
     def file_dialog(self):
         # print("opening file dialog")
-        if not self.recent_dirs:
+        if not len(self.recent_dirs):
             self.update_files(QFileDialog.getOpenFileNames(
                 self, "Files to process")[0])
         else:
             self.update_files(QFileDialog.getOpenFileNames(
-                self, "Files to process", self.recent_dirs[-1])[0])
+                self, "Files to process", self.recent_dirs[0])[0])
 
     def recent_dir_dialog(self, index):
         # print("opening dir dialog")
