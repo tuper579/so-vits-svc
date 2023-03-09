@@ -22,8 +22,16 @@ def get_cluster_result(model, x, speaker):
 
 def get_cluster_center_result(model, x,speaker):
     """x: np.array [t, 256]"""
-    predict = model[speaker].predict(x)
-    return model[speaker].cluster_centers_[predict]
+    if model.get(speaker) is None:
+        print("Warning -- speaker "+speaker+" not found in cluster model.")
+        print("Cluster model keys: ",model.keys())
+        print("Running anyways...")
+        first_key = list(model.keys())[0]
+        predict = model[first_key].predict(x)
+        return model[first_key].cluster_centers_[predict]
+    else:
+        predict = model[speaker].predict(x)
+        return model[speaker].cluster_centers_[predict]
 
 def get_center(model, x,speaker):
     return model[speaker].cluster_centers_[x]
