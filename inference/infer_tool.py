@@ -119,6 +119,7 @@ class Svc(object):
         self.hop_size = self.hps_ms.data.hop_length
         self.spk2id = self.hps_ms.spk
         self.use_old_f0 = False
+        self.use_crepe = False
         self.voice_threshold = 0.3
 
         # 加载hubert
@@ -149,8 +150,11 @@ class Svc(object):
 
         wav, sr = librosa.load(in_path, sr=self.target_sample)
 
-        if self.use_old_f0:
-            f0 = utils.compute_f0_parselmouth(wav, sampling_rate=self.target_sample, hop_length=self.hop_size, voice_thresh=self.voice_threshold)
+        if self.use_crepe:
+            f0 = utils.compute_f0_crepe(wav, sampling_rate=self.target_sample,
+                hop_length=self.hop_size, voice_thresh=self.voice_threshold)
+        elif self.use_old_f0:
+            f0 = utils.compute_f0_parselmouth(wav, sampling_rate=self.target_sample, hop_length=self.hop_size)
         else:
             f0 = utils.compute_f0_parselmouth_alt(wav, sampling_rate=self.target_sample, hop_length=self.hop_size, voice_thresh=self.voice_threshold)
         f0, uv = utils.interpolate_f0(f0)

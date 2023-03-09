@@ -146,6 +146,36 @@ def compute_f0_parselmouth(wav_numpy, p_len=None, sampling_rate=44100, hop_lengt
         f0 = np.pad(f0,[[pad_size,p_len - len(f0) - pad_size]], mode='constant')
     return f0
 
+def compute_f0_crepe(wav_numpy, p_len=None, sampling_rate=44100,
+        hop_length=512, voice_thresh = 0.3):
+    import crepe
+    x = wav_numpy
+    if p_len is None:
+        p_len = x.shape[0]//hop_length
+    else:
+        assert abs(p_len-x.shape[0]//hop_length) < 4, "pad length error"
+    time_step = hop_length / sampling_rate * 1000
+    _,f0,_,_ = crepe.predict(audio=x,sr=sampling_rate,
+        step_size=time_step,viterbi=True)
+
+    pad_size=(p_len - len(f0) + 1) // 2
+    if(pad_size>0 or p_len - len(f0) - pad_size>0):
+        f0 = np.pad(f0,[[pad_size,p_len - len(f0) - pad_size]], mode='constant')
+    
+    f0 = f0[:int(x.size / hop_length)]
+    #print(pad_size)
+    #print(p_len)
+    #print(x.shape)
+    #print(x.size / hop_length)
+    #print(f0.shape)
+
+    # Use parselmouth to determine voiced/unvoiced
+    parsel_mask = compute_f0_parselmouth_alt(wav_numpy, p_len, sampling_rate,
+        hop_length, voice_thresh)
+    f0[parsel_mask == 0] = 0
+
+    return f0
+
 def compute_f0_parselmouth_alt(wav_numpy, p_len=None, sampling_rate=44100,
     hop_length=512, voice_thresh = 0.3):
     import parselmouth

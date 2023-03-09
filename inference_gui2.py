@@ -46,6 +46,12 @@ else:
     print("Note: Pygame is not available.")
     PYGAME_AVAILABLE = False
 
+if (importlib.util.find_spec("tensorflow") and 
+    importlib.util.find_spec("crepe")):
+    CREPE_AVAILABLE = True
+else:
+    CREPE_AVAILABLE = False
+
 if importlib.util.find_spec("requests"):
     import requests
     REQUESTS_AVAILABLE = True
@@ -600,6 +606,11 @@ class InferenceGui2 (QMainWindow):
         self.voice_threshold.setValidator(self.voice_validator)
         self.voice_threshold.textChanged.connect(self.update_voice_thresh)
 
+        if CREPE_AVAILABLE:
+            self.use_crepe = QCheckBox("Use crepe for f0 estimation")
+            self.use_crepe.stateChanged.connect(self.update_crepe)
+            self.sovits_lay.addWidget(self.use_crepe)
+
         self.thresh_frame = FieldWidget(self.thresh_label, self.voice_threshold)
         self.sovits_lay.addWidget(self.thresh_frame)
 
@@ -889,7 +900,8 @@ class InferenceGui2 (QMainWindow):
                 cluster_model_path=self.cluster_path)
 
     def cluster_model_dialog(self):
-        file_tup = QFileDialog.getOpenFileName(self, "Cluster model file")
+        file_tup = QFileDialog.getOpenFileName(self, "Cluster model file",
+            MODELS_DIR)
         if file_tup is None or not len(file_tup) or not os.path.exists(
             file_tup[0]):
             return
@@ -957,12 +969,15 @@ class InferenceGui2 (QMainWindow):
     def output_dialog(self):
         temp_output_dir = QFileDialog.getExistingDirectory(self,
             "Output Directory", self.output_dir, QFileDialog.ShowDirsOnly)
-        if not os.path.exists(output_dir):
+        if not os.path.exists(temp_output_dir):
             return
         self.output_dir = temp_output_dir
         self.output_label.setText("Output Directory: "+str(self.output_dir))
 
         # int(self.transpose_num.text())
+
+    def update_crepe(self):
+        self.svc_model.use_crepe = self.use_crepe.checkState()
 
     def save_persist(self):
         with open(JSON_NAME, "w") as f:
