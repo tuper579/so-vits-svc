@@ -39,6 +39,7 @@ import librosa
 
 if importlib.util.find_spec("pygame"):
     from pygame import mixer, _sdl2 as devicer
+    import pygame._sdl2.audio as sdl2_audio
     print("Pygame is available.")
     print("Realtime recording enabled. Press r to record.")
     PYGAME_AVAILABLE = True
@@ -327,11 +328,13 @@ class AudioRecorder(QGroupBox):
 
         if PYGAME_AVAILABLE:
             self.record_out_label = QLabel("Output device")
-            self.out_devs = QAudioDeviceInfo.availableDevices(QAudio.AudioOutput)
+            mixer.init()
+            self.out_devs = sdl2_audio.get_audio_device_names(False)
+            mixer.quit()
             self.output_dev_box = QComboBox()
             for dev in self.out_devs:
-                if self.output_dev_box.findText(dev.deviceName()) == -1:
-                    self.output_dev_box.addItem(dev.deviceName())
+                if self.output_dev_box.findText(dev) == -1:
+                    self.output_dev_box.addItem(dev)
             self.output_dev_box.currentIndexChanged.connect(self.set_output_dev)
             self.selected_dev = None
             self.set_output_dev(0)
@@ -390,7 +393,7 @@ class AudioRecorder(QGroupBox):
 
     def update_init_audio(self):
         if PYGAME_AVAILABLE:
-            mixer.init(devicename = self.selected_dev.deviceName())
+            mixer.init(devicename = self.selected_dev)
             if self.mic_checkbox.isChecked():
                 self.ui_parent.mic_state = True
             else:
@@ -403,7 +406,7 @@ class AudioRecorder(QGroupBox):
         self.selected_dev = self.out_devs[idx]
         if mixer.get_init() is not None:
             mixer.quit()
-            mixer.init(devicename = self.selected_dev.deviceName())
+            mixer.init(devicename = self.selected_dev)
 
     def record_dir_dialog(self):
         temp_record_dir = QFileDialog.getExistingDirectory(self,
