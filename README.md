@@ -22,16 +22,16 @@ A singing voice coversion (SVC) model, using the SoftVC encoder to extract featu
 Demo：[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/innnky/sovits4)
 
 ## Required downloads
-+ Download ContentVec model:[checkpoint_best_legacy_500.pt](https://ibm.box.com/s/z1wgl1stco8ffooyatzdwsqn2psd9lrr)
++ Download ContentVec model:[checkpoint_best_legacy_500.pt](https://huggingface.co/therealvul/so-vits-svc-4.0-init/resolve/main/checkpoint_best_legacy_500.pt)
   + Place under `hubert`.
-+ Download pretrained models [G_0.pth](https://huggingface.co/innnky/sovits_pretrained/resolve/main/sovits4/G_0.pth) and [D_0.pth](https://huggingface.co/innnky/sovits_pretrained/resolve/main/sovits4/D_0.pth)
++ Download pretrained models [G_0.pth](https://huggingface.co/therealvul/so-vits-svc-4.0-init/resolve/main/G_0.pth) and [D_0.pth](https://huggingface.co/therealvul/so-vits-svc-4.0-init/resolve/main/D_0.pth)
   + Place under `logs/44k`.
   + Pretrained models are required, because from experiments, training from scratch can be rather unpredictable to say the least, and training with a pretrained model can greatly improve training speeds.
   + The pretrained model includes云灏, 即霜, 辉宇·星AI, 派蒙, and 绫地宁宁, covering the common ranges of both male and female voices, and so it can be seen as a rather universal pretrained model.
 
 ```shell
-wget -P logs/44k/ https://huggingface.co/innnky/sovits_pretrained/resolve/main/sovits4/G_0.pth
-wget -P logs/44k/ https://huggingface.co/innnky/sovits_pretrained/resolve/main/sovits4/D_0.pth
+wget -P logs/44k/ https://huggingface.co/therealvul/so-vits-svc-4.0-init/resolve/main/G_0.pth
+wget -P logs/44k/ https://huggingface.co/therealvul/so-vits-svc-4.0-init/resolve/main/D_0.pth
 ```
 
 ## Colab notebook scripts
