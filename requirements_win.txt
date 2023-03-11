@@ -22,3 +22,5 @@ onnx
 onnxsim
 onnxoptimizer
 fairseq
+tensorboard
+PyQt5
