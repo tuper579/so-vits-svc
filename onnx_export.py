@@ -2,7 +2,7 @@ import torch
 from torchaudio.models.wav2vec2.utils import import_fairseq_model
 from fairseq import checkpoint_utils
 from onnxexport.model_onnx import SynthesizerTrn
-import utils
+import sovits_utils
 
 def get_hubert_model():
     vec_path = "hubert/checkpoint_best_legacy_500.pt"
@@ -48,12 +48,12 @@ def main(HubertExport, NetExport):
                           )'''
     if NetExport:
         device = torch.device("cpu")
-        hps = utils.get_hparams_from_file(f"checkpoints/{path}/config.json")
+        hps = sovits_utils.get_hparams_from_file(f"checkpoints/{path}/config.json")
         SVCVITS = SynthesizerTrn(
             hps.data.filter_length // 2 + 1,
             hps.train.segment_size // hps.data.hop_length,
             **hps.model)
-        _ = utils.load_checkpoint(f"checkpoints/{path}/model.pth", SVCVITS, None)
+        _ = sovits_utils.load_checkpoint(f"checkpoints/{path}/model.pth", SVCVITS, None)
         _ = SVCVITS.eval().to(device)
         for i in SVCVITS.parameters():
             i.requires_grad = False

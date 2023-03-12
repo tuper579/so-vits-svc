@@ -8,13 +8,13 @@ import torch
 from glob import glob
 from tqdm import tqdm
 
-import utils
+import sovits_utils
 import logging
 logging.getLogger('numba').setLevel(logging.WARNING)
 import librosa
 import numpy as np
 
-hps = utils.get_hparams_from_file("configs/config.json")
+hps = sovits_utils.get_hparams_from_file("configs/config.json")
 sampling_rate = hps.data.sampling_rate
 hop_length = hps.data.hop_length
 
@@ -27,18 +27,19 @@ def process_one(filename, hmodel):
         devive = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         wav16k = librosa.resample(wav, orig_sr=sampling_rate, target_sr=16000)
         wav16k = torch.from_numpy(wav16k).to(devive)
-        c = utils.get_hubert_content(hmodel, wav_16k_tensor=wav16k)
+        c = sovits_utils.get_hubert_content(hmodel, wav_16k_tensor=wav16k)
         torch.save(c.cpu(), soft_path)
     f0_path = filename + ".f0.npy"
     if not os.path.exists(f0_path):
-        f0 = utils.compute_f0_dio(wav, sampling_rate=sampling_rate, hop_length=hop_length)
+        f0 = sovits_utils.compute_f0_dio(wav, sampling_rate=sampling_rate, hop_length=hop_length)
+        #f0 = sovits_utils.compute_f0_crepe(wav, sampling_rate=sampling_rate, hop_length=hop_length)
         np.save(f0_path, f0)
 
 
 def process_batch(filenames):
     print("Loading hubert for content...")
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    hmodel = utils.get_hubert_model().to(device)
+    hmodel = sovits_utils.get_hubert_model().to(device)
     print("Loaded hubert.")
     for filename in tqdm(filenames):
         process_one(filename, hmodel)

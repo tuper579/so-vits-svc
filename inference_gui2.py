@@ -912,6 +912,7 @@ class InferenceGui2 (QMainWindow):
             return
         self.svc_model.hotload_cluster(file_tup[0])
         self.cluster_path = file_tup[0]
+        self.cluster_switch.setEnabled(True)
         self.cluster_label.setText("Current cluster model: "+
             self.cluster_path)       
 

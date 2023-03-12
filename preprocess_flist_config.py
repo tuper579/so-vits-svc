@@ -44,7 +44,8 @@ if __name__ == "__main__":
             if not file.endswith("wav"):
                 continue
             if not pattern.match(file):
-                print(f"warning：文件名{file}中包含非字母数字下划线，可能会导致错误。（也可能不会）")
+                #print(f"warning：文件名{file}中包含非字母数字下划线，可能会导致错误。（也可能不会）")
+                pass
             if get_wav_duration(file) < 0.3:
                 print("skip too short audio:", file)
                 continue

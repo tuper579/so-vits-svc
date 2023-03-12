@@ -6,9 +6,9 @@ import torch
 import torch.utils.data
 
 import modules.commons as commons
-import utils
+import sovits_utils
 from modules.mel_processing import spectrogram_torch, spec_to_mel_torch
-from utils import load_wav_to_torch, load_filepaths_and_text
+from sovits_utils import load_wav_to_torch, load_filepaths_and_text
 
 # import h5py
 
@@ -60,12 +60,12 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         spk = torch.LongTensor([self.spk_map[spk]])
 
         f0 = np.load(filename + ".f0.npy")
-        f0, uv = utils.interpolate_f0(f0)
+        f0, uv = sovits_utils.interpolate_f0(f0)
         f0 = torch.FloatTensor(f0)
         uv = torch.FloatTensor(uv)
 
         c = torch.load(filename+ ".soft.pt")
-        c = utils.repeat_expand_2d(c.squeeze(0), f0.shape[0])
+        c = sovits_utils.repeat_expand_2d(c.squeeze(0), f0.shape[0])
 
 
         lmin = min(c.size(-1), spec.size(-1))

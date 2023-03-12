@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
 import time
+import deepspeed
 
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
 import os
@@ -51,7 +52,7 @@ def validate(hps):
 def main():
     """Assume Single Node Multi GPUs Training Only"""
     assert torch.cuda.is_available(), "CPU training is not allowed."
-    hps = sovits_utils.get_hparams()
+    hps, cmd_args = sovits_utils.get_hparams_deepspeed()
 
     n_gpus = torch.cuda.device_count()
     os.environ['MASTER_ADDR'] = 'localhost'
@@ -59,10 +60,10 @@ def main():
 
     validate(hps)
 
-    mp.spawn(run, nprocs=n_gpus, args=(n_gpus, hps,))
+    mp.spawn(run, nprocs=n_gpus, args=(n_gpus, hps, cmd_args))
 
 
-def run(rank, n_gpus, hps):
+def run(rank, n_gpus, hps, cmd_args):
     global global_step
     if rank == 0:
         logger = sovits_utils.get_logger(hps.model_dir)
@@ -72,7 +73,9 @@ def run(rank, n_gpus, hps):
         writer_eval = SummaryWriter(log_dir=os.path.join(hps.model_dir, "eval"))
 
     # for pytorch on win, backend use gloo    
-    dist.init_process_group(backend=  'gloo' if os.name == 'nt' else 'nccl', init_method='env://', world_size=n_gpus, rank=rank)
+    deepspeed.init_distributed(dist_backend='gloo' if os.name == 'nt' else 'nccl',
+        world_size=n_gpus, rank=rank)
+
     torch.manual_seed(hps.train.seed)
     torch.cuda.set_device(rank)
     collate_fn = TextAudioCollate()
@@ -86,23 +89,23 @@ def run(rank, n_gpus, hps):
                                  batch_size=1, pin_memory=False,
                                  drop_last=False, collate_fn=collate_fn)
 
-    net_g = SynthesizerTrn(
-        hps.data.filter_length // 2 + 1,
-        hps.train.segment_size // hps.data.hop_length,
-        **hps.model).cuda(rank)
-    net_d = MultiPeriodDiscriminator(hps.model.use_spectral_norm).cuda(rank)
-    optim_g = torch.optim.AdamW(
-        net_g.parameters(),
-        hps.train.learning_rate,
-        betas=hps.train.betas,
-        eps=hps.train.eps)
-    optim_d = torch.optim.AdamW(
-        net_d.parameters(),
-        hps.train.learning_rate,
-        betas=hps.train.betas,
-        eps=hps.train.eps)
-    net_g = DDP(net_g, device_ids=[rank])  # , find_unused_parameters=True)
-    net_d = DDP(net_d, device_ids=[rank])
+    init_g = SynthesizerTrn(hps.data.filter_length // 2 + 1,
+            hps.train.segment_size // hps.data.hop_length,
+            **hps.model)
+    net_g, optim_g, _, _ = deepspeed.initialize(
+        args = cmd_args,
+        model = init_g, 
+        model_parameters = init_g.parameters(),
+        config = 'configs/deepspeed.json')
+    init_d = MultiPeriodDiscriminator(hps.model.use_spectral_norm)
+    net_d, optim_d, _, _ = deepspeed.initialize(
+        args = cmd_args,
+        model = init_d,
+        model_parameters = init_d.parameters(),
+        config = 'configs/deepspeed.json')
+
+    #net_g = DDP(net_g, device_ids=[rank])  # , find_unused_parameters=True)
+    #net_d = DDP(net_d, device_ids=[rank])
 
     skip_optimizer = False
     try:

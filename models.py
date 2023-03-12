@@ -11,10 +11,10 @@ import modules.modules as modules
 from torch.nn import Conv1d, ConvTranspose1d, AvgPool1d, Conv2d
 from torch.nn.utils import weight_norm, remove_weight_norm, spectral_norm
 
-import utils
+import sovits_utils
 from modules.commons import init_weights, get_padding
 from vdecoder.hifigan.models import Generator
-from utils import f0_to_coarse
+from sovits_utils import f0_to_coarse
 
 class ResidualCouplingBlock(nn.Module):
   def __init__(self,
@@ -386,7 +386,7 @@ class SynthesizerTrn(nn.Module):
 
     # f0 predict
     lf0 = 2595. * torch.log10(1. + f0.unsqueeze(1) / 700.) / 500
-    norm_lf0 = utils.normalize_f0(lf0, x_mask, uv)
+    norm_lf0 = sovits_utils.normalize_f0(lf0, x_mask, uv)
     pred_lf0 = self.f0_decoder(x, norm_lf0, x_mask, spk_emb=g)
 
     # encoder
@@ -410,7 +410,7 @@ class SynthesizerTrn(nn.Module):
 
     if predict_f0:
         lf0 = 2595. * torch.log10(1. + f0.unsqueeze(1) / 700.) / 500
-        norm_lf0 = utils.normalize_f0(lf0, x_mask, uv, random_scale=False)
+        norm_lf0 = sovits_utils.normalize_f0(lf0, x_mask, uv, random_scale=False)
         pred_lf0 = self.f0_decoder(x, norm_lf0, x_mask, spk_emb=g)
         f0 = (700 * (torch.pow(10, pred_lf0 * 500 / 2595) - 1)).squeeze(1)
 
