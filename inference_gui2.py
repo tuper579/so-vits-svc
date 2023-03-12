@@ -307,7 +307,11 @@ class AudioRecorder(QGroupBox):
                 self.input_dev_box.addItem(inp)
         self.layout.addWidget(self.input_dev_box)
         self.input_dev_box.currentIndexChanged.connect(self.set_input_dev)
-        self.set_input_dev(0) # Always use the first listed output
+        if len(self.recorder.audioInputs()) == 0:
+            self.record_button.setEnabled(False) 
+            print("No audio inputs found")
+        else:
+            self.set_input_dev(0) # Always use the first listed output
         # Doing otherwise on Windows would require platform-specific code
 
         self.record_button = QPushButton("Record")
@@ -400,7 +404,9 @@ class AudioRecorder(QGroupBox):
                 self.ui_parent.mic_state = False
 
     def set_input_dev(self, idx):
-        self.recorder.setAudioInput(self.recorder.audioInputs()[idx])
+        num_audio_inputs = len(self.recorder.audioInputs())
+        if idx < num_audio_inputs:
+            self.recorder.setAudioInput(self.recorder.audioInputs()[idx])
 
     def set_output_dev(self, idx):
         self.selected_dev = self.out_devs[idx]
