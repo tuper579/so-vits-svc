@@ -17,7 +17,6 @@ from torch.utils.tensorboard import SummaryWriter
 import torch.multiprocessing as mp
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.cuda.amp import autocast
 
 import modules.commons as commons
 import sovits_utils
@@ -167,52 +166,50 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, loaders, logg
             hps.data.mel_fmin,
             hps.data.mel_fmax)
 
-        with autocast(enabled=hps.train.fp16_run):
-            y_hat, ids_slice, z_mask, \
-            (z, z_p, m_p, logs_p, m_q, logs_q), pred_lf0, norm_lf0, lf0
-                = net_g(c, f0, uv, spec, g=g, c_lengths=lengths,
-                    spec_lengths=lengths)
+        y_hat, ids_slice, z_mask, \
+        (z, z_p, m_p, logs_p, m_q, logs_q), pred_lf0, norm_lf0, lf0
+            = net_g(c, f0, uv, spec, g=g, c_lengths=lengths,
+                spec_lengths=lengths)
 
-            y_mel = commons.slice_segments(mel, ids_slice,
-                hps.train.segment_size // hps.data.hop_length)
-            y_hat_mel = mel_spectrogram_torch(
-                y_hat.squeeze(1),
-                hps.data.filter_length,
-                hps.data.n_mel_channels,
-                hps.data.sampling_rate,
-                hps.data.hop_length,
-                hps.data.win_length,
-                hps.data.mel_fmin,
-                hps.data.mel_fmax
-            )
-            y = commons.slice_segments(y, ids_slice * hps.data.hop_length,
-                hps.train.segment_size)  # slice
+        y_mel = commons.slice_segments(mel, ids_slice,
+            hps.train.segment_size // hps.data.hop_length)
+        y_hat_mel = mel_spectrogram_torch(
+            y_hat.squeeze(1),
+            hps.data.filter_length,
+            hps.data.n_mel_channels,
+            hps.data.sampling_rate,
+            hps.data.hop_length,
+            hps.data.win_length,
+            hps.data.mel_fmin,
+            hps.data.mel_fmax
+        )
+        y = commons.slice_segments(y, ids_slice * hps.data.hop_length,
+            hps.train.segment_size)  # slice
 
-            # Discriminator
-            y_d_hat_r, y_d_hat_g, _, _ = net_d(y, y_hat.detach())
+        # Discriminator
+        y_d_hat_r, y_d_hat_g, _, _ = net_d(y, y_hat.detach())
 
-            with autocast(enabled=False): # False
-                loss_disc, losses_disc_r, losses_disc_g = discriminator_loss(
-                    y_d_hat_r, y_d_hat_g)
-                loss_disc_all = loss_disc
+        loss_disc, losses_disc_r, losses_disc_g = discriminator_loss(
+            y_d_hat_r, y_d_hat_g)
+        loss_disc_all = loss_disc
 
         optim_d.zero_grad()
         optim_d.backward(loss_disc_all)
         optim_d.step()
         grad_norm_d = commons.clip_grad_value_(net_d.parameters(), None)
 
-        with autocast(enabled=hps.train.fp16_run):
-            # Generator
-            y_d_hat_r, y_d_hat_g, fmap_r, fmap_g = net_d(y, y_hat)
-            with autocast(enabled=False): # False
-                loss_mel = F.l1_loss(y_mel, y_hat_mel) * hps.train.c_mel
-                loss_kl = kl_loss(
-                    z_p, logs_q, m_p, logs_p, z_mask) * hps.train.c_kl
-                loss_fm = feature_loss(fmap_r, fmap_g)
-                loss_gen, losses_gen = generator_loss(y_d_hat_g)
-                loss_lf0 = F.mse_loss(pred_lf0, lf0)
-                loss_gen_all = (loss_gen + loss_fm + loss_mel +
-                    loss_kl + loss_lf0)
+        # Generator
+        y_d_hat_r, y_d_hat_g, fmap_r, fmap_g = net_d(y, y_hat)
+
+        loss_mel = F.l1_loss(y_mel, y_hat_mel) * hps.train.c_mel
+        loss_kl = kl_loss(
+            z_p, logs_q, m_p, logs_p, z_mask) * hps.train.c_kl
+        loss_fm = feature_loss(fmap_r, fmap_g)
+        loss_gen, losses_gen = generator_loss(y_d_hat_g)
+        loss_lf0 = F.mse_loss(pred_lf0, lf0)
+        loss_gen_all = (loss_gen + loss_fm + loss_mel +
+            loss_kl + loss_lf0)
+
         optim_g.zero_grad()
         optim_g.backward(loss_gen_all)
         grad_norm_g = commons.clip_grad_value_(net_g.parameters(), None)
