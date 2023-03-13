@@ -114,7 +114,7 @@ class Svc(object):
         else:
             self.dev = torch.device(device)
         self.net_g_ms = None
-        self.hps_ms = utils.get_hparams_from_file(config_path)
+        self.hps_ms = sovits_utils.get_hparams_from_file(config_path)
         self.target_sample = self.hps_ms.data.sampling_rate
         self.hop_size = self.hps_ms.data.hop_length
         self.spk2id = self.hps_ms.spk
@@ -123,7 +123,7 @@ class Svc(object):
         self.voice_threshold = 0.6
 
         # 加载hubert
-        self.hubert_model = utils.get_hubert_model().to(self.dev)
+        self.hubert_model = sovits_utils.get_hubert_model().to(self.dev)
         self.load_model()
         if os.path.exists(cluster_model_path):
             self.cluster_model = cluster.get_cluster_model(cluster_model_path)
@@ -138,7 +138,7 @@ class Svc(object):
             self.hps_ms.data.filter_length // 2 + 1,
             self.hps_ms.train.segment_size // self.hps_ms.data.hop_length,
             **self.hps_ms.model)
-        _ = utils.load_checkpoint(self.net_g_path, self.net_g_ms, None)
+        _ = sovits_utils.load_checkpoint(self.net_g_path, self.net_g_ms, None)
         if "half" in self.net_g_path and torch.cuda.is_available():
             _ = self.net_g_ms.half().eval().to(self.dev)
         else:
@@ -151,13 +151,13 @@ class Svc(object):
         wav, sr = librosa.load(in_path, sr=self.target_sample)
 
         if self.use_crepe:
-            f0 = utils.compute_f0_crepe(wav, sampling_rate=self.target_sample,
+            f0 = sovits_utils.compute_f0_crepe(wav, sampling_rate=self.target_sample,
                 hop_length=self.hop_size, voice_thresh=self.voice_threshold)
         elif self.use_old_f0:
-            f0 = utils.compute_f0_parselmouth(wav, sampling_rate=self.target_sample, hop_length=self.hop_size)
+            f0 = sovits_utils.compute_f0_parselmouth(wav, sampling_rate=self.target_sample, hop_length=self.hop_size)
         else:
-            f0 = utils.compute_f0_parselmouth_alt(wav, sampling_rate=self.target_sample, hop_length=self.hop_size, voice_thresh=self.voice_threshold)
-        f0, uv = utils.interpolate_f0(f0)
+            f0 = sovits_utils.compute_f0_parselmouth_alt(wav, sampling_rate=self.target_sample, hop_length=self.hop_size, voice_thresh=self.voice_threshold)
+        f0, uv = sovits_utils.interpolate_f0(f0)
         f0 = torch.FloatTensor(f0)
         uv = torch.FloatTensor(uv)
         f0 = f0 * 2 ** (tran / 12)
@@ -166,8 +166,8 @@ class Svc(object):
 
         wav16k = librosa.resample(wav, orig_sr=self.target_sample, target_sr=16000)
         wav16k = torch.from_numpy(wav16k).to(self.dev)
-        c = utils.get_hubert_content(self.hubert_model, wav_16k_tensor=wav16k)
-        c = utils.repeat_expand_2d(c.squeeze(0), f0.shape[1])
+        c = sovits_utils.get_hubert_content(self.hubert_model, wav_16k_tensor=wav16k)
+        c = sovits_utils.repeat_expand_2d(c.squeeze(0), f0.shape[1])
 
         if cluster_infer_ratio !=0:
             cluster_c = cluster.get_cluster_center_result(
