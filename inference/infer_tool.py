@@ -17,7 +17,7 @@ import torchaudio
 
 import cluster
 from hubert import hubert_model
-import utils
+import sovits_utils
 from models import SynthesizerTrn
 
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
@@ -120,7 +120,7 @@ class Svc(object):
         self.spk2id = self.hps_ms.spk
         self.use_old_f0 = False
         self.use_crepe = False
-        self.voice_threshold = 0.3
+        self.voice_threshold = 0.6
 
         # 加载hubert
         self.hubert_model = utils.get_hubert_model().to(self.dev)
@@ -170,7 +170,8 @@ class Svc(object):
         c = utils.repeat_expand_2d(c.squeeze(0), f0.shape[1])
 
         if cluster_infer_ratio !=0:
-            cluster_c = cluster.get_cluster_center_result(self.cluster_model, c.cpu().numpy().T, speaker).T
+            cluster_c = cluster.get_cluster_center_result(
+                self.cluster_model, c.cpu().numpy().T, speaker).T
             cluster_c = torch.FloatTensor(cluster_c).to(self.dev)
             c = cluster_infer_ratio * cluster_c + (1 - cluster_infer_ratio) * c
 
@@ -180,7 +181,7 @@ class Svc(object):
     def infer(self, speaker, tran, raw_path,
               cluster_infer_ratio=0,
               auto_predict_f0=False,
-              noice_scale=0.4):
+              noice_scale=0.8):
         speaker_id = self.spk2id[speaker]
         sid = torch.LongTensor([int(speaker_id)]).to(self.dev).unsqueeze(0)
         c, f0, uv = self.get_unit_f0(raw_path, tran, cluster_infer_ratio, speaker)
