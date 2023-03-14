@@ -9,8 +9,9 @@ import copy
 import importlib.util
 from ctypes import cast, POINTER, c_int, c_short, c_float
 from pathlib import Path
-from PyQt5.QtCore import pyqtSignal, Qt, QUrl, QSize
-from PyQt5.QtGui import (QIntValidator, QDoubleValidator, QKeySequence)
+from PyQt5.QtCore import pyqtSignal, Qt, QUrl, QSize, QMimeData
+from PyQt5.QtGui import (QIntValidator, QDoubleValidator, QKeySequence,
+    QDrag)
 from PyQt5.QtMultimedia import (
    QMediaContent, QAudio, QAudioDeviceInfo, QMediaPlayer, QAudioRecorder,
    QAudioEncoderSettings, QMultimedia, QAudioDeviceInfo,
@@ -229,11 +230,14 @@ class AudioPreviewWidget(QWidget):
         self.play_button.clicked.connect(self.toggle_play)
         self.play_button.setSizePolicy(QSizePolicy.Maximum,
             QSizePolicy.Minimum)
+        self.play_button.mouseMoveEvent = self.drag_hook
 
         self.seek_slider.sliderMoved.connect(self.seek)
         self.player.positionChanged.connect(self.update_seek_slider)
         self.player.stateChanged.connect(self.state_changed)
         self.player.durationChanged.connect(self.duration_changed)
+
+        self.local_file = ""
 
     def set_text(self, text=""):
         if len(text) > 0:
@@ -252,8 +256,22 @@ class AudioPreviewWidget(QWidget):
 
             self.play_button.setIcon(self.style().standardIcon(
                 getattr(QStyle, 'SP_MediaPlay')))
+
+            self.local_file = path
         except Exception as e:
             pass
+
+    def drag_hook(self, e):
+        if e.buttons() != Qt.LeftButton:
+            return
+        if not len(self.local_file):
+            return
+
+        mime_data = QMimeData()
+        mime_data.setUrls([QUrl.fromLocalFile(self.local_file)])
+        drag = QDrag(self)
+        drag.setMimeData(mime_data)
+        drag.exec_(Qt.CopyAction)
 
     def from_memory(self, data):
         self.player.stop()
