@@ -41,7 +41,7 @@ start_time = time.time()
 def validate(hps):
     # Errors that might occur:
     # dataset/44k has more than one character (generally not preferred)
-    assert len(os.listdir('dataset/44k')) == 1, "more than one character present!!!"
+    #assert len(os.listdir('dataset/44k')) == 1, "more than one character present!!!"
     ckpt = sovits_utils.latest_checkpoint_path(hps.model_dir, "G_*.pth")
     # no pretrained model present
     assert ckpt is not None, "no pretrained model present!!!"
@@ -112,8 +112,13 @@ def run(rank, n_gpus, hps):
                                                    optim_d, skip_optimizer)
         epoch_str = max(epoch_str, 1)
         global_step = (epoch_str - 1) * len(train_loader)
+        if hps.reset:
+            print("Resetting model steps!!!")
+            epoch_str = 1
+            global_step = 0
     except:
-        print("load old checkpoint failed...")
+        raise Exception("No pretrained model found")
+        print("Load old checkpoint failed!!!")
         epoch_str = 1
         global_step = 0
     if skip_optimizer:
