@@ -429,7 +429,7 @@ def get_hparams(init=True):
                       help='JSON file for configuration')
   parser.add_argument('-m', '--model', type=str, required=True,
                       help='Model name')
-  parser.add_argument('-r', '--reset', type=bool, default=False,
+  parser.add_argument('-r', '--reset', action='store_true',
                       help='Treat loaded model as though 0 epochs/steps have passed')
 
   args = parser.parse_args()
