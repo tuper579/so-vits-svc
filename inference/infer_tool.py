@@ -1,9 +1,11 @@
+import zlib
 import hashlib
 import io
 import json
 import logging
 import os
 import time
+import sys
 from pathlib import Path
 from inference import slicer
 
@@ -21,7 +23,6 @@ import sovits_utils
 from models import SynthesizerTrn
 
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
-
 
 def read_temp(file_name):
     if not os.path.exists(file_name):
@@ -121,6 +122,7 @@ class Svc(object):
         self.use_old_f0 = False
         self.use_crepe = False
         self.voice_threshold = 0.6
+        self.f0_cache = {}
 
         # 加载hubert
         self.hubert_model = sovits_utils.get_hubert_model().to(self.dev)
@@ -150,13 +152,22 @@ class Svc(object):
 
         wav, sr = librosa.load(in_path, sr=self.target_sample)
 
-        if self.use_crepe:
+        f0_key = (zlib.adler32(bytes(wav)), self.voice_threshold,
+            self.use_crepe, self.use_old_f0)
+
+        if f0_key in self.f0_cache:
+            f0 = self.f0_cache[f0_key]
+        elif self.use_crepe:
             f0 = sovits_utils.compute_f0_crepe(wav, sampling_rate=self.target_sample,
                 hop_length=self.hop_size, voice_thresh=self.voice_threshold)
+            self.f0_cache[f0_key] = f0
         elif self.use_old_f0:
             f0 = sovits_utils.compute_f0_parselmouth(wav, sampling_rate=self.target_sample, hop_length=self.hop_size)
+            self.f0_cache[f0_key] = f0
         else:
             f0 = sovits_utils.compute_f0_parselmouth_alt(wav, sampling_rate=self.target_sample, hop_length=self.hop_size, voice_thresh=self.voice_threshold)
+            self.f0_cache[f0_key] = f0
+
         f0, uv = sovits_utils.interpolate_f0(f0)
         f0 = torch.FloatTensor(f0)
         uv = torch.FloatTensor(uv)
