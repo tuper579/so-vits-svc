@@ -204,6 +204,7 @@ class AudioPreviewWidget(QWidget):
         self.vlayout.setContentsMargins(0,0,0,0)
 
         self.playing_label = QLabel("Preview")
+        self.playing_label.setWordWrap(True)
         self.vlayout.addWidget(self.playing_label)
 
         self.player_frame = QFrame()
