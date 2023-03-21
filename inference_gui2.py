@@ -774,6 +774,7 @@ class InferenceGui2 (QMainWindow):
         self.talknet_file_button = FileButton(label="Provide input audio")
         self.talknet_file = ""
         self.talknet_file_label = QLabel("File: "+self.talknet_file)
+        self.talknet_file_label.setWordWrap(True)
         self.talknet_lay.addWidget(self.talknet_file_button)
         self.talknet_lay.addWidget(self.talknet_file_label)
         self.talknet_file_button.clicked.connect(self.talknet_file_dialog)
@@ -783,7 +784,7 @@ class InferenceGui2 (QMainWindow):
 
         self.talknet_input_preview = AudioPreviewWidget()
         self.talknet_lay.addWidget(self.talknet_input_preview)
-        
+       
         self.talknet_recent_label = QLabel("Recent Directories:")
         self.talknet_lay.addWidget(self.talknet_recent_label)
         self.talknet_recent_combo = QComboBox()
@@ -797,9 +798,10 @@ class InferenceGui2 (QMainWindow):
 
         self.talknet_transpose_label = QLabel("Transpose")
         self.talknet_transpose_num = QLineEdit('0')
+        self.talknet_transpose_frame = FieldWidget(
+            self.talknet_transpose_label, self.talknet_transpose_num)
         self.talknet_transpose_num.setValidator(self.transpose_validator)
-        self.talknet_lay.addWidget(self.talknet_transpose_label)
-        self.talknet_lay.addWidget(self.talknet_transpose_num)
+        self.talknet_lay.addWidget(self.talknet_transpose_frame)
 
         self.talknet_transcript_label = QLabel("Transcript")
         self.talknet_transcript_edit = QPlainTextEdit()
@@ -835,6 +837,9 @@ class InferenceGui2 (QMainWindow):
         self.talknet_lay.addWidget(self.talknet_output_preview)
         self.talknet_lay.addWidget(self.talknet_sovits_output_preview)
         self.talknet_sovits_output_preview.hide()
+
+        self.talknet_lay.setSpacing(0)
+        self.talknet_lay.setContentsMargins(0,0,0,0)
 
         self.layout.addWidget(self.talknet_frame)
         print("Loaded TalkNet")
