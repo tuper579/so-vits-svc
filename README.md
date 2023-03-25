@@ -6,7 +6,7 @@
 * 4.0 is now the default branch for this repo.
 
 ## Inference GUI 2
-PyQt5, which is used for the GUI, should be installed with `requirements.txt` or `requirements_win.txt` automatically. Additional features may be available based on other dependencies:
+PyQt5, which is used for the GUI, should be installed with `requirements.txt` or `requirements_win.txt` automatically, in a Python 3.8/3.9 environment. Additional features may be available based on other dependencies:
 * OPTIONAL - You PROBABLY DO NOT NEED THIS: For timestretching support, you need to install BOTH [the rubberband standalone program](https://breakfastquay.com/rubberband/), ensuring the rubberband executable is on your PATH, and the python module `pip install pyrubberband`. __Note that installing pyrubberband installs PySoundFile which needs to be uninstalled, and SoundFile will need to be reinstalled.__
 * OPTIONAL - For TalkNet support, you need to `pip install requests` and also install this [ControllableTalkNet fork](https://github.com/effusiveperiscope/ControllableTalkNet).
 * OPTIONAL - For crepe pitch detection support, `pip install tensorflow crepe`
@@ -57,6 +57,10 @@ The right UI panel allows for recording audio directly into the GUI for quick fi
   `to_pitch_cc`. MAY be preferred for speaking inputs with rapidly varying pitch.
 * Use crepe for f0 estimation - (requires crepe) - Captures generally smoother pitch with fewer artifacts at the cost of GPU time and resources; however, may not be suitable for inputs with rapidly varying pitch.
 * Voicing threshold - Alters the tendency for the input (as well as background noise) to be considered voiced vs. unvoiced. 0.0 means that everything is considered to be voiced.
+
+### Cool features
+* You can drag and drop files from the audio preview by dragging from the play
+  button, if a sound is present.
 
 ### Running with TalkNet 
 For TalkNet support, you need to `pip install requests` and also install this [ControllableTalkNet fork](https://github.com/effusiveperiscope/ControllableTalkNet). Instead of running `talknet_offline.py`, run `alt_server.py` (if you use a batch script or conda environment to run TalkNet, you should use it to run `alt_server.py`). This will start a server that can interface with Inference GUI 2. The TalkNet server should be started before Inference GUI 2.
