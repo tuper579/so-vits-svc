@@ -725,7 +725,8 @@ class InferenceGui2 (QMainWindow):
         try:
             result = sock.connect_ex((ip, port))
             if result == 0:
-                print("Successfully found TalkNet on address "+self.talknet_addr)
+                print("TalkNet: Successfully found a service on address "
+                      +self.talknet_addr)
                 sock.close()
                 return True
             else:
@@ -751,7 +752,9 @@ class InferenceGui2 (QMainWindow):
 
         self.character_box = QComboBox()
         self.character_label = QLabel("Speaker:")
-        response = requests.get('http://'+self.talknet_addr+'/characters')
+        response = requests.get(
+            'http://'+self.talknet_addr+'/characters',
+            timeout=10)
         if response.status_code == 200:
             try:
                 self.talknet_chars = json.loads(response.text)
@@ -871,7 +874,7 @@ class InferenceGui2 (QMainWindow):
                 'transcript':self.talknet_transcript_edit.toPlainText(),
                 'results_dir':self.output_dir,
                 'disable_reference_audio':self.talknet_dra.isChecked()}),
-             headers={'Content-Type':'application/json'})
+             headers={'Content-Type':'application/json'}, timeout=10)
         if response.status_code != 200:
             print("TalkNet generate request failed.")
             print("It may be useful to check the TalkNet server output.")
