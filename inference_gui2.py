@@ -253,7 +253,8 @@ class AudioPreviewWidget(QWidget):
             if hasattr(self, 'audio_buffer'):
                 self.audio_buffer.close()
 
-            self.player.setMedia(QMediaContent(QUrl.fromLocalFile(path)))
+            self.player.setMedia(QMediaContent(QUrl.fromLocalFile(
+                os.path.abspath(path))))
 
             self.play_button.setIcon(self.style().standardIcon(
                 getattr(QStyle, 'SP_MediaPlay')))
