@@ -692,7 +692,12 @@ class InferenceGui2 (QMainWindow):
             self.svc_model.voice_threshold = 0.3
 
     def update_voice_thresh(self):
-        self.svc_model.voice_threshold = float(self.voice_threshold.text())
+        try:
+            self.svc_model.voice_threshold = float(self.voice_threshold.text())
+        except ValueError as e:
+            # drop conversion errors
+            # because this seems to be fired on Linux before enter is pressed
+            pass
 
     def update_files(self, files):
         if (files is None) or (len(files) == 0):
