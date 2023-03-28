@@ -582,7 +582,8 @@ class InferenceGui2 (QMainWindow):
 
         self.source_transpose_frame = FieldWidget(
             self.source_transpose_label, self.source_transpose_num)
-        self.sovits_lay.addWidget(self.source_transpose_frame)
+        # Disable formant shifting as it is not useful in 4.0
+        #self.sovits_lay.addWidget(self.source_transpose_frame)
 
         self.transpose_label = QLabel("Transpose")
         self.transpose_num = QLineEdit('0')
