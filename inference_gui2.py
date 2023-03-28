@@ -14,7 +14,7 @@ from PyQt5.QtGui import (QIntValidator, QDoubleValidator, QKeySequence,
     QDrag)
 from PyQt5.QtMultimedia import (
    QMediaContent, QAudio, QAudioDeviceInfo, QMediaPlayer, QAudioRecorder,
-   QAudioEncoderSettings, QMultimedia, QAudioDeviceInfo,
+   QAudioEncoderSettings, QMultimedia,
    QAudioProbe, QAudioFormat)
 from PyQt5.QtWidgets import (QWidget,
    QSizePolicy, QStyle, QProgressBar,
@@ -317,17 +317,34 @@ class AudioRecorder(QGroupBox):
         self.layout = QVBoxLayout(self)
         self.ui_parent = par
 
+        self.audio_settings = QAudioEncoderSettings()
+        if os.name == "nt":
+            self.audio_settings.setCodec("audio/pcm")
+        else:
+            self.audio_settings.setCodec("audio/x-raw")
+        self.audio_settings.setSampleRate(44100)
+        self.audio_settings.setBitRate(16)
+        self.audio_settings.setQuality(QMultimedia.HighQuality)
+        self.audio_settings.setEncodingMode(
+            QMultimedia.ConstantQualityEncoding)
+
         self.preview = AudioPreviewWidget()
         self.layout.addWidget(self.preview)
 
         self.recorder = QAudioRecorder()
         self.input_dev_box = QComboBox()
-        for inp in self.recorder.audioInputs():
+        if os.name == "nt":
+            self.audio_inputs = self.recorder.audioInputs()
+        else:
+            self.audio_inputs = [x.deviceName() 
+                for x in QAudioDeviceInfo.availableDevices(0)]
+
+        for inp in self.audio_inputs:
             if self.input_dev_box.findText(inp) == -1:
                 self.input_dev_box.addItem(inp)
         self.layout.addWidget(self.input_dev_box)
         self.input_dev_box.currentIndexChanged.connect(self.set_input_dev)
-        if len(self.recorder.audioInputs()) == 0:
+        if len(self.audio_inputs) == 0:
             self.record_button.setEnabled(False) 
             print("No audio inputs found")
         else:
@@ -373,14 +390,6 @@ class AudioRecorder(QGroupBox):
             self.record_dir))
         self.record_dir_button.clicked.connect(self.record_dir_dialog)
 
-        self.audio_settings = QAudioEncoderSettings()
-        self.audio_settings.setCodec("audio/pcm")
-        self.audio_settings.setSampleRate(44100)
-        self.audio_settings.setBitRate(16)
-        self.audio_settings.setQuality(QMultimedia.HighQuality)
-        self.audio_settings.setEncodingMode(
-            QMultimedia.ConstantQualityEncoding)
-
         self.last_output = ""
 
         self.sovits_button = QPushButton("Push last output to so-vits-svc")
@@ -424,9 +433,9 @@ class AudioRecorder(QGroupBox):
                 self.ui_parent.mic_state = False
 
     def set_input_dev(self, idx):
-        num_audio_inputs = len(self.recorder.audioInputs())
+        num_audio_inputs = len(self.audio_inputs)
         if idx < num_audio_inputs:
-            self.recorder.setAudioInput(self.recorder.audioInputs()[idx])
+            self.recorder.setAudioInput(self.audio_inputs[idx])
 
     def set_output_dev(self, idx):
         self.selected_dev = self.out_devs[idx]
@@ -455,7 +464,6 @@ class AudioRecorder(QGroupBox):
             if self.automatic_checkbox.isChecked():
                 self.push_to_sovits()
                 self.ui_parent.sofvits_convert()
-                
         else:
             self.record()
             self.record_button.setText("Recording to "+str(
