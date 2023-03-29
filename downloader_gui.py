@@ -14,6 +14,8 @@ from pathlib import Path
 # Only enable this if you plan on training off a downloaded model.
 DOWNLOAD_DISCRIMINATORS = False
 MODELS_DIR = os.path.join("so-vits-svc",MODELS_DIR)
+if not os.path.exists(MODELS_DIR):
+    os.makedirs(MODELS_DIR, exist_ok=True)
 
 class DownloadStrategy:
     def __init__(self, repo_id : str, model_dir : str):
