@@ -14,9 +14,6 @@ from pathlib import Path
 # Only enable this if you plan on training off a downloaded model.
 DOWNLOAD_DISCRIMINATORS = False
 MODELS_DIR = os.path.join("so-vits-svc",MODELS_DIR)
-if not os.path.exists(MODELS_DIR):
-    os.makedirs(MODELS_DIR, exist_ok=True)
-
 class DownloadStrategy:
     def __init__(self, repo_id : str, model_dir : str):
         """ Pull from HF to find available models """
@@ -264,6 +261,10 @@ if __name__ == '__main__':
     if (Path(os.getcwd()).stem == 'so-vits-svc' or 
         ("inference_gui2.py" in os.listdir())):
         os.chdir('..')
+
+    if not os.path.exists(MODELS_DIR):
+        os.makedirs(MODELS_DIR, exist_ok=True)
+
     app = QApplication(sys.argv)
     w = DownloaderGui()
     w.show()
