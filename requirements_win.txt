@@ -27,3 +27,5 @@ onnxoptimizer
 fairseq
 tensorboard
 PyQt5
+huggingface_hub
+datasets
