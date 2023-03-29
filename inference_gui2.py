@@ -1152,8 +1152,9 @@ class InferenceGui2 (QMainWindow):
             traceback.print_exc()
         return res_paths
 
-app = QApplication(sys.argv)
-w = InferenceGui2()
-w.show()
-app.exec()
-w.save_persist()
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    w = InferenceGui2()
+    w.show()
+    app.exec()
+    w.save_persist()
