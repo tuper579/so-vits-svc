@@ -403,6 +403,11 @@ class AudioRecorder(QGroupBox):
             self.mic_checkbox = QCheckBox("Auto-play output to selected output device")
             self.layout.addWidget(self.mic_checkbox)
             self.mic_checkbox.stateChanged.connect(self.update_init_audio)
+
+            self.mic_output_control = QCheckBox("Auto-delete audio from "
+                "recordings/results after auto-playing")
+            self.layout.addWidget(self.mic_output_control)
+            self.mic_output_control.stateChanged.connect(self.update_delfiles)
         
         if (par.talknet_available):
             self.talknet_button = QPushButton("Push last output to TalkNet")
@@ -432,6 +437,9 @@ class AudioRecorder(QGroupBox):
             else:
                 self.ui_parent.mic_state = False
 
+    def update_delfiles(self):
+        self.ui_parent.mic_delfiles = self.mic_output_control.isChecked()
+
     def set_input_dev(self, idx):
         num_audio_inputs = len(self.audio_inputs)
         if idx < num_audio_inputs:
@@ -457,10 +465,11 @@ class AudioRecorder(QGroupBox):
             self.recorder.stop()
             self.record_button.setText("Record")
             self.last_output = self.recorder.outputLocation().toLocalFile()
-            self.preview.from_file(
-                self.recorder.outputLocation().toLocalFile())
-            self.preview.set_text("Preview - "+os.path.basename(
-                self.recorder.outputLocation().toLocalFile()))
+            if not (PYGAME_AVAILABLE and self.mic_output_control.isChecked()):
+                self.preview.from_file(
+                    self.recorder.outputLocation().toLocalFile())
+                self.preview.set_text("Preview - "+os.path.basename(
+                    self.recorder.outputLocation().toLocalFile()))
             if self.automatic_checkbox.isChecked():
                 self.push_to_sovits()
                 self.ui_parent.sofvits_convert()
@@ -525,6 +534,7 @@ class InferenceGui2 (QMainWindow):
         super().__init__()
 
         self.mic_state = False
+        self.mic_delfiles = False
         self.clean_files = [0]
         self.speakers = get_speakers()
         self.speaker = {}
@@ -918,8 +928,9 @@ class InferenceGui2 (QMainWindow):
         self.file_label.setText("Files: "+str(self.clean_files))
 
     def update_input_preview(self):
-        self.input_preview.from_file(self.clean_files[0])
-        self.input_preview.set_text("Preview - "+self.clean_files[0])
+        if not (PYGAME_AVAILABLE and self.mic_delfiles):
+            self.input_preview.from_file(self.clean_files[0])
+            self.input_preview.set_text("Preview - "+self.clean_files[0])
 
     def transfer_to_sovits(self):
         if (self.talknet_file is None) or not (
@@ -1051,7 +1062,7 @@ class InferenceGui2 (QMainWindow):
 
     def sofvits_convert(self):
         res_paths = self.convert(self.clean_files)
-        if len(res_paths) > 0:
+        if len(res_paths) > 0 and not (PYGAME_AVAILABLE and self.mic_delfiles):
             self.output_preview.from_file(res_paths[0])
             self.output_preview.set_text("Preview - "+res_paths[0])
         return res_paths
@@ -1139,7 +1150,8 @@ class InferenceGui2 (QMainWindow):
                     # audio = pyrb.time_stretch(np.array(audio),
                         # audio_sr, 1.0/float(self.ts_num.text()))
                     
-                soundfile.write(res_path, audio, self.svc_model.target_sample,
+                soundfile.write(res_path, audio,
+                    self.svc_model.target_sample,
                     format=wav_format)
                 res_paths.append(res_path)
                 if PYGAME_AVAILABLE and self.mic_state:
@@ -1148,6 +1160,10 @@ class InferenceGui2 (QMainWindow):
                     else:
                         mixer.music.load(res_paths[0])
                         mixer.music.play()
+                if self.mic_delfiles:
+                    os.remove(clean_name)
+                    os.remove(wav_path)
+                    os.remove(res_path)
         except Exception as e:
             traceback.print_exc()
         return res_paths
