@@ -38,14 +38,16 @@ from inference.infer_tool import Svc
 
 import librosa
 
-if importlib.util.find_spec("pygame"):
+if (importlib.util.find_spec("pygame")):
     from pygame import mixer, _sdl2 as devicer
     import pygame._sdl2.audio as sdl2_audio
-    print("Pygame is available.")
-    print("Realtime recording enabled. Press r to record.")
+    RECORD_SHORTCUT = "ctrl+shift+r"
+    print("Automatic mode enabled. Press "+RECORD_SHORTCUT+
+        " to toggle recording.")
     PYGAME_AVAILABLE = True
 else:
-    print("Note: Pygame is not available.")
+    print("Note: Automatic mode not available."
+    "To enable: pip install pygame keyboard")
     PYGAME_AVAILABLE = False
 
 if (importlib.util.find_spec("tensorflow") and 
@@ -355,8 +357,18 @@ class AudioRecorder(QGroupBox):
         self.record_button.clicked.connect(self.toggle_record)
         self.layout.addWidget(self.record_button)
 
-        self.shortcut = QShortcut(QKeySequence("r"), self)
-        self.shortcut.activated.connect(self.toggle_record)
+        if PYGAME_AVAILABLE and importlib.util.find_spec("keyboard"):
+            try:
+                import keyboard
+                keyboard.add_hotkey(RECORD_SHORTCUT,self.toggle_record)
+            except ImportError as e:
+                print("Keyboard failed to import.")
+                print("On Linux, must be run as root for recording hotkey out of focus.")
+                self.record_shortcut = QShortcut(QKeySequence(RECORD_SHORTCUT), self)
+                self.record_shortcut.activated.connect(self.toggle_record)
+        else:
+            self.record_shortcut = QShortcut(QKeySequence(RECORD_SHORTCUT), self)
+            self.record_shortcut.activated.connect(self.toggle_record)
 
         self.probe = QAudioProbe()
         self.probe.setSource(self.recorder)
