@@ -38,10 +38,10 @@ from inference.infer_tool import Svc
 
 import librosa
 
+RECORD_SHORTCUT = "ctrl+shift+r"
 if (importlib.util.find_spec("pygame")):
     from pygame import mixer, _sdl2 as devicer
     import pygame._sdl2.audio as sdl2_audio
-    RECORD_SHORTCUT = "ctrl+shift+r"
     print("Automatic mode enabled. Press "+RECORD_SHORTCUT+
         " to toggle recording.")
     PYGAME_AVAILABLE = True
@@ -183,17 +183,17 @@ class VSTWidget(QWidget):
         self.plugin_container = None
 
     def select_plugin(self):
-        files = QFileDialog.getOpenFileName(self, "Plugin to load")
-        if not len(files):
+        file = QFileDialog.getOpenFileName(self, "Plugin to load")
+        if not len(file[0]):
             return
-        self.plugin_container = pedalboard.VST3Plugin(files[0])
+        self.plugin_container = pedalboard.VST3Plugin(file[0])
 
     def open_editor(self):
         self.plugin_container.show_editor()
 
     def process(self, array, sr):
         if self.plugin_container is None:
-            return
+            return array
         if self.bypass_button.isChecked():
             return array
         return self.plugin_container.process(input_array = array, sample_rate = sr)
@@ -311,10 +311,10 @@ class AudioPreviewWidget(QWidget):
     def seek(self, position):
         self.player.setPosition(position)
 
-class AudioRecorder(QGroupBox):
+class AudioRecorderAndVSTs(QGroupBox):
     def __init__(self, par):
         super().__init__()
-        self.setTitle("audio recorder")
+        self.setTitle("Audio recorder and VST processing")
         self.setStyleSheet("padding:10px")
         self.layout = QVBoxLayout(self)
         self.ui_parent = par
@@ -335,6 +335,8 @@ class AudioRecorder(QGroupBox):
 
         self.recorder = QAudioRecorder()
         self.input_dev_box = QComboBox()
+        self.input_dev_box.setSizePolicy(QSizePolicy.Preferred,
+            QSizePolicy.Preferred)
         if os.name == "nt":
             self.audio_inputs = self.recorder.audioInputs()
         else:
@@ -342,8 +344,8 @@ class AudioRecorder(QGroupBox):
                 for x in QAudioDeviceInfo.availableDevices(0)]
 
         for inp in self.audio_inputs:
-            if self.input_dev_box.findText(inp) == -1:
-                self.input_dev_box.addItem(inp)
+            if self.input_dev_box.findText(el_trunc(inp,60)) == -1:
+                self.input_dev_box.addItem(el_trunc(inp,60))
         self.layout.addWidget(self.input_dev_box)
         self.input_dev_box.currentIndexChanged.connect(self.set_input_dev)
         if len(self.audio_inputs) == 0:
@@ -385,9 +387,11 @@ class AudioRecorder(QGroupBox):
             self.out_devs = sdl2_audio.get_audio_device_names(False)
             mixer.quit()
             self.output_dev_box = QComboBox()
+            self.output_dev_box.setSizePolicy(QSizePolicy.Preferred,
+                QSizePolicy.Preferred)
             for dev in self.out_devs:
-                if self.output_dev_box.findText(dev) == -1:
-                    self.output_dev_box.addItem(dev)
+                if self.output_dev_box.findText(el_trunc(dev,60)) == -1:
+                    self.output_dev_box.addItem(el_trunc(dev,60))
             self.output_dev_box.currentIndexChanged.connect(self.set_output_dev)
             self.selected_dev = None
             self.set_output_dev(0)
@@ -425,8 +429,41 @@ class AudioRecorder(QGroupBox):
             self.talknet_button = QPushButton("Push last output to TalkNet")
             self.layout.addWidget(self.talknet_button)
             self.talknet_button.clicked.connect(self.push_to_talknet)
+
+        if PEDALBOARD_AVAILABLE:
+            self.vst_input_frame = QGroupBox(self)
+            self.vst_input_frame.setTitle("so-vits-svc Pre VSTs")
+            self.vst_input_layout = QVBoxLayout(self.vst_input_frame)
+            self.layout.addWidget(self.vst_input_frame)
+            self.vst_inputs = []
+            for i in range(2):
+                vst_widget = VSTWidget()
+                self.vst_inputs.append(vst_widget)
+                self.vst_input_layout.addWidget(vst_widget)
+
+            self.vst_output_frame = QGroupBox(self)
+            self.vst_output_frame.setTitle("so-vits-svc Post VSTs")
+            self.vst_output_layout = QVBoxLayout(self.vst_output_frame)
+            self.layout.addWidget(self.vst_output_frame)
+            self.vst_outputs = []
+            for i in range(2):
+                vst_widget = VSTWidget()
+                self.vst_outputs.append(vst_widget)
+                self.vst_output_layout.addWidget(vst_widget)
         
         self.layout.addStretch()
+
+    def output_chain(self, data, sr):
+        if PEDALBOARD_AVAILABLE:
+            for v in self.vst_outputs:
+                data = v.process(data, sr)
+        return data
+
+    def input_chain(self, data, sr):
+        if PEDALBOARD_AVAILABLE:
+            for v in self.vst_inputs:
+                data = v.process(data, sr)
+        return data
 
     def update_volume(self, buf):
         sample_size = buf.format().sampleSize()
@@ -698,8 +735,8 @@ class InferenceGui2 (QMainWindow):
 
         self.sovits_lay.addStretch()
 
-        self.audio_recorder = AudioRecorder(self)
-        self.layout.addWidget(self.audio_recorder)
+        self.audio_recorder_and_plugins = AudioRecorderAndVSTs(self)
+        self.layout.addWidget(self.audio_recorder_and_plugins)
 
         # TalkNet component
         if self.talknet_available:
@@ -1102,6 +1139,10 @@ class InferenceGui2 (QMainWindow):
                 for (slice_tag, data) in audio_data:
                     print(f'#=====segment start, '
                         f'{round(len(data)/audio_sr, 3)}s======')
+
+                    if PEDALBOARD_AVAILABLE:
+                        data = self.audio_recorder_and_plugins.input_chain(data, audio_sr)
+
                     if not (source_trans == 0):
                         print ('performing source transpose...')
                         if not RUBBERBAND_AVAILABLE:
@@ -1158,9 +1199,7 @@ class InferenceGui2 (QMainWindow):
                         f'{self.speaker["name"]}{i}.{wav_format}')
                     i += 1
 
-                # if RUBBERBAND_AVAILABLE and (float(self.ts_num.text()) != 1.0):
-                    # audio = pyrb.time_stretch(np.array(audio),
-                        # audio_sr, 1.0/float(self.ts_num.text()))
+                audio = self.audio_recorder_and_plugins.output_chain(data, audio_sr)
                     
                 soundfile.write(res_path, audio,
                     self.svc_model.target_sample,
