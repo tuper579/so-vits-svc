@@ -5,11 +5,21 @@
 	* Inference GUI 2 features experimental TalkNet integration, in-program recording, as well as other features like timestretching with rubberband and crepe pitch detection. Instructions can be found below under `Inference GUI 2` header.
 * 4.0 is now the default branch for this repo.
 
-## Inference GUI 2
-PyQt5, which is used for the GUI, should be installed with `requirements.txt` or `requirements_win.txt` automatically, in a Python 3.8/3.9 environment. Additional features may be available based on other dependencies:
+## Inference GUI 2 - Installation
+On Windows, try the script under releases.
+Otherwise: `pip install -r requirements.txt` in a Python 3.8/3.9 (conda) environment. Additional features may be available based on other dependencies:
 * OPTIONAL - You PROBABLY DO NOT NEED THIS: For timestretching support, you need to install BOTH [the rubberband standalone program](https://breakfastquay.com/rubberband/), ensuring the rubberband executable is on your PATH, and the python module `pip install pyrubberband`. __Note that installing pyrubberband installs PySoundFile which needs to be uninstalled, and SoundFile will need to be reinstalled.__
 * OPTIONAL - For TalkNet support, you need to `pip install requests` and also install this [ControllableTalkNet fork](https://github.com/effusiveperiscope/ControllableTalkNet).
 * OPTIONAL - For crepe pitch detection support, `pip install tensorflow crepe`
+* OPTIONAL - For auto playback, `pip install pygame`
+* OPTIONAL - For auto recording/playback using a hotkey without window focus,
+  `pip install keyboard`. Requires sudo on Linux. **Please note that `keyboard`
+  uses OS keyboard hooks. This allows it to read your keystrokes without window
+  focus. This also could result in unexpected keyboard behavior in the event of
+  a crash.**
+* OPTIONAL - For VST3 support, `pip install pedalboard`. **Please note that
+  pedalboard's support for VST3 is fairly temperamental and crashes may result.
+  Additionally, plugins are not guaranteed to function correctly.**
 
 ### Basic Usage 
 

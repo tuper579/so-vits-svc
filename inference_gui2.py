@@ -9,7 +9,8 @@ import copy
 import importlib.util
 from ctypes import cast, POINTER, c_int, c_short, c_float
 from pathlib import Path
-from PyQt5.QtCore import pyqtSignal, Qt, QUrl, QSize, QMimeData
+from PyQt5.QtCore import (pyqtSignal, Qt, QUrl, QSize, QMimeData, QMetaObject,
+    pyqtSlot)
 from PyQt5.QtGui import (QIntValidator, QDoubleValidator, QKeySequence,
     QDrag)
 from PyQt5.QtMultimedia import (
@@ -167,6 +168,7 @@ class FieldWidget(QFrame):
         self.layout.addWidget(field)
 
 class VSTWidget(QWidget):
+    sig_editor_open = pyqtSignal(bool)
     def __init__(self):
         # this should not even be loaded if pedalboard is not available
         assert PEDALBOARD_AVAILABLE 
@@ -179,6 +181,7 @@ class VSTWidget(QWidget):
         self.editor_button = QPushButton("Open UI")
         self.editor_button.clicked.connect(self.open_editor)
         self.layout.addWidget(self.select_button)
+        self.layout.addWidget(self.editor_button)
         self.bypass_button = QCheckBox("Bypass")
         self.layout.addWidget(self.bypass_button)
         self.plugin_container = None
@@ -187,17 +190,27 @@ class VSTWidget(QWidget):
         file = QFileDialog.getOpenFileName(self, "Plugin to load")
         if not len(file[0]):
             return
-        self.plugin_container = pedalboard.VST3Plugin(file[0])
+        try:
+            self.plugin_container = pedalboard.VST3Plugin(file[0])
+            self.select_button.setText(self.plugin_container.name)
+        except ImportError as e:
+            self.plugin_container = None
+            self.select_button.setText("No VST loaded")
 
     def open_editor(self):
-        self.plugin_container.show_editor()
+        if self.plugin_container is not None:
+            self.sig_editor_open.emit(True)
+            self.plugin_container.show_editor()
+            self.sig_editor_open.emit(False)
 
     def process(self, array, sr):
         if self.plugin_container is None:
             return array
         if self.bypass_button.isChecked():
             return array
-        return self.plugin_container.process(input_array = array, sample_rate = sr)
+        return self.plugin_container.process(
+            input_array = np.array(array),
+            sample_rate = float(sr))
 
 class AudioPreviewWidget(QWidget):
     def __init__(self):
@@ -452,6 +465,8 @@ class AudioRecorderAndVSTs(QGroupBox):
                 vst_widget = VSTWidget()
                 self.vst_inputs.append(vst_widget)
                 self.vst_input_layout.addWidget(vst_widget)
+                vst_widget.sig_editor_open.connect(
+                    self.ui_parent.pass_editor_ctl)
 
             self.vst_output_frame = QGroupBox(self)
             self.vst_output_frame.setTitle("so-vits-svc Post VSTs")
@@ -462,6 +477,8 @@ class AudioRecorderAndVSTs(QGroupBox):
                 vst_widget = VSTWidget()
                 self.vst_outputs.append(vst_widget)
                 self.vst_output_layout.addWidget(vst_widget)
+                vst_widget.sig_editor_open.connect(
+                    self.ui_parent.pass_editor_ctl)
         
         self.layout.addStretch()
 
@@ -762,6 +779,9 @@ class InferenceGui2 (QMainWindow):
             self.try_load_speaker(0)
         else:
             print("No speakers found!")
+
+    def pass_editor_ctl(self, status : bool):
+        self.setEnabled(not status)
 
     # Periodically delete junk files if mic_delfiles is toggled
     def try_delete_prep_cache(self):
