@@ -69,7 +69,8 @@ else:
     PEDALBOARD_AVAILABLE = False
 
 if (subprocess.run(["where","rubberband"] if os.name == "nt" else 
-    ["which","rubberband"]).returncode == 0) and importlib.util.find_spec("pyrubberband"):
+    ["which","rubberband"]).returncode == 0) and importlib.util.find_spec(
+        "pyrubberband"):
     print("Rubberband is available!")
     import pyrubberband as pyrb
     RUBBERBAND_AVAILABLE = True
@@ -312,6 +313,7 @@ class AudioPreviewWidget(QWidget):
         self.player.setPosition(position)
 
 class AudioRecorderAndVSTs(QGroupBox):
+    keyboardRecordSignal = pyqtSignal()
     def __init__(self, par):
         super().__init__()
         self.setTitle("Audio recorder and VST processing")
@@ -361,15 +363,25 @@ class AudioRecorderAndVSTs(QGroupBox):
 
         if PYGAME_AVAILABLE and importlib.util.find_spec("keyboard"):
             try:
+                print("Keyboard module loaded.")
+                print("Recording shortcut without window focus enabled.")
                 import keyboard
-                keyboard.add_hotkey(RECORD_SHORTCUT,self.toggle_record)
+                def keyboard_record_hook():
+                    self.keyboardRecordSignal.emit()
+                keyboard.add_hotkey(RECORD_SHORTCUT,keyboard_record_hook)
+                self.keyboardRecordSignal.connect(self.toggle_record)
             except ImportError as e:
-                print("Keyboard failed to import.")
-                print("On Linux, must be run as root for recording hotkey out of focus.")
-                self.record_shortcut = QShortcut(QKeySequence(RECORD_SHORTCUT), self)
+                print("Keyboard module failed to import.")
+                print("On Linux, must be run as root for recording"
+                    "hotkey out of focus.")
+                self.record_shortcut = QShortcut(QKeySequence(RECORD_SHORTCUT),
+                    self)
                 self.record_shortcut.activated.connect(self.toggle_record)
         else:
-            self.record_shortcut = QShortcut(QKeySequence(RECORD_SHORTCUT), self)
+            print("No keyboard module available.")
+            print("Using default input capture for recording shortcut.")
+            self.record_shortcut = QShortcut(QKeySequence(RECORD_SHORTCUT),
+                self)
             self.record_shortcut.activated.connect(self.toggle_record)
 
         self.probe = QAudioProbe()
@@ -510,15 +522,15 @@ class AudioRecorderAndVSTs(QGroupBox):
             "Recordings directory: "+str(self.record_dir))
         
     def toggle_record(self):
+        #print("toggle_record triggered at "+str(id(self)))
         if self.recorder.status() == QAudioRecorder.RecordingStatus:
             self.recorder.stop()
             self.record_button.setText("Record")
             self.last_output = self.recorder.outputLocation().toLocalFile()
             if not (PYGAME_AVAILABLE and self.mic_output_control.isChecked()):
-                self.preview.from_file(
-                    self.recorder.outputLocation().toLocalFile())
+                self.preview.from_file(self.last_output)
                 self.preview.set_text("Preview - "+os.path.basename(
-                    self.recorder.outputLocation().toLocalFile()))
+                    self.last_output))
             if self.automatic_checkbox.isChecked():
                 self.push_to_sovits()
                 self.ui_parent.sofvits_convert()
@@ -735,6 +747,8 @@ class InferenceGui2 (QMainWindow):
 
         self.sovits_lay.addStretch()
 
+        self.delete_prep_cache = []
+
         self.audio_recorder_and_plugins = AudioRecorderAndVSTs(self)
         self.layout.addWidget(self.audio_recorder_and_plugins)
 
@@ -748,6 +762,16 @@ class InferenceGui2 (QMainWindow):
             self.try_load_speaker(0)
         else:
             print("No speakers found!")
+
+    # Periodically delete junk files if mic_delfiles is toggled
+    def try_delete_prep_cache(self):
+        for f in self.delete_prep_cache:
+            if os.path.exists(f):
+                try:
+                    os.remove(f)
+                    self.delete_prep_cache.remove(f)
+                except PermissionError as e:
+                    continue
         
     def update_f0_switch(self):
         if self.f0_switch.isChecked():
@@ -1141,7 +1165,8 @@ class InferenceGui2 (QMainWindow):
                         f'{round(len(data)/audio_sr, 3)}s======')
 
                     if PEDALBOARD_AVAILABLE:
-                        data = self.audio_recorder_and_plugins.input_chain(data, audio_sr)
+                        data = self.audio_recorder_and_plugins.input_chain(
+                            data, audio_sr)
 
                     if not (source_trans == 0):
                         print ('performing source transpose...')
@@ -1199,7 +1224,9 @@ class InferenceGui2 (QMainWindow):
                         f'{self.speaker["name"]}{i}.{wav_format}')
                     i += 1
 
-                audio = self.audio_recorder_and_plugins.output_chain(data, audio_sr)
+                if PEDALBOARD_AVAILABLE:
+                    audio = self.audio_recorder_and_plugins.output_chain(
+                        audio, audio_sr)
                     
                 soundfile.write(res_path, audio,
                     self.svc_model.target_sample,
@@ -1212,9 +1239,11 @@ class InferenceGui2 (QMainWindow):
                         mixer.music.load(res_paths[0])
                         mixer.music.play()
                 if self.mic_delfiles:
-                    os.remove(clean_name)
-                    os.remove(wav_path)
-                    os.remove(res_path)
+                    # Not sure how else to handle this without expensive loop
+                    self.delete_prep_cache.append(clean_name)
+                    self.delete_prep_cache.append(wav_path)
+                    self.delete_prep_cache.append(res_path)
+                    self.try_delete_prep_cache()
         except Exception as e:
             traceback.print_exc()
         return res_paths
