@@ -230,9 +230,10 @@ def f0_to_coarse(f0):
   return f0_coarse
 
 
-def get_hubert_model():
+def get_hubert_model(quiet=False):
   vec_path = "hubert/checkpoint_best_legacy_500.pt"
-  print("load model(s) from {}".format(vec_path))
+  if not quiet:
+      print("load model(s) from {}".format(vec_path))
   from fairseq import checkpoint_utils
   models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task(
     [vec_path],
@@ -295,7 +296,7 @@ def load_checkpoint(checkpoint_path, model, optimizer=None, skip_optimizer=False
         model.module.load_state_dict(new_state_dict)
     else:
         model.load_state_dict(new_state_dict)
-    print("load ")
+    #print("load ")
     logger.info("Loaded checkpoint '{}' (iteration {})".format(
         checkpoint_path, iteration))
     return model, optimizer, learning_rate, iteration

@@ -121,11 +121,13 @@ class Svc(object):
         self.spk2id = self.hps_ms.spk
         self.use_old_f0 = False
         self.use_crepe = False
+        self.quiet_mode = False
         self.voice_threshold = 0.6
         self.f0_cache = {}
 
         # 加载hubert
-        self.hubert_model = sovits_utils.get_hubert_model().to(self.dev)
+        self.hubert_model = sovits_utils.get_hubert_model(
+            self.quiet_mode).to(self.dev)
         self.load_model()
         if os.path.exists(cluster_model_path):
             self.cluster_model = cluster.get_cluster_model(cluster_model_path)
@@ -202,7 +204,8 @@ class Svc(object):
             start = time.time()
             audio = self.net_g_ms.infer(c, f0=f0, g=sid, uv=uv, predict_f0=auto_predict_f0, noice_scale=noice_scale)[0,0].data.float()
             use_time = time.time() - start
-            print("vits use time:{}".format(use_time))
+            if not self.quiet_mode:
+                print("vits use time:{}".format(use_time))
         return audio, audio.shape[-1]
 
     def slice_inference(self,raw_audio_path, spk, tran, slice_db,cluster_infer_ratio, auto_predict_f0,noice_scale, pad_seconds=0.5):
@@ -212,7 +215,8 @@ class Svc(object):
 
         audio = []
         for (slice_tag, data) in audio_data:
-            print(f'#=====segment start, {round(len(data) / audio_sr, 3)}s======')
+            if not self.quiet_mode:
+                print(f'#=====segment start, {round(len(data) / audio_sr, 3)}s======')
             # padd
             pad_len = int(audio_sr * pad_seconds)
             data = np.concatenate([np.zeros([pad_len]), data, np.zeros([pad_len])])
@@ -221,7 +225,8 @@ class Svc(object):
             soundfile.write(raw_path, data, audio_sr, format="wav")
             raw_path.seek(0)
             if slice_tag:
-                print('jump empty segment')
+                if not self.quiet_mode:
+                    print('jump empty segment')
                 _audio = np.zeros(length)
             else:
                 out_audio, out_sr = self.infer(spk, tran, raw_path,
