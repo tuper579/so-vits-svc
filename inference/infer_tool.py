@@ -108,7 +108,8 @@ def pad_array(arr, target_length):
 class Svc(object):
     def __init__(self, net_g_path, config_path,
                  device=None,
-                 cluster_model_path="logs/44k/kmeans_10000.pt"):
+                 cluster_model_path="logs/44k/kmeans_10000.pt",
+                 quiet=False):
         self.net_g_path = net_g_path
         if device is None:
             self.dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -121,7 +122,7 @@ class Svc(object):
         self.spk2id = self.hps_ms.spk
         self.use_old_f0 = False
         self.use_crepe = False
-        self.quiet_mode = False
+        self.quiet_mode = quiet
         self.voice_threshold = 0.6
         self.f0_cache = {}
 
