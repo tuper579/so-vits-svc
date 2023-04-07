@@ -358,6 +358,10 @@ class AudioRecorderAndVSTs(QGroupBox):
             self.audio_inputs = [x.deviceName() 
                 for x in QAudioDeviceInfo.availableDevices(0)]
 
+        self.record_button = QPushButton("Record")
+        self.record_button.clicked.connect(self.toggle_record)
+        self.layout.addWidget(self.record_button)
+
         for inp in self.audio_inputs:
             if self.input_dev_box.findText(el_trunc(inp,60)) == -1:
                 self.input_dev_box.addItem(el_trunc(inp,60))
@@ -369,10 +373,6 @@ class AudioRecorderAndVSTs(QGroupBox):
         else:
             self.set_input_dev(0) # Always use the first listed output
         # Doing otherwise on Windows would require platform-specific code
-
-        self.record_button = QPushButton("Record")
-        self.record_button.clicked.connect(self.toggle_record)
-        self.layout.addWidget(self.record_button)
 
         if PYGAME_AVAILABLE and importlib.util.find_spec("keyboard"):
             try:
@@ -1270,7 +1270,9 @@ class InferenceGui2 (QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+
     w = InferenceGui2()
     w.show()
     app.exec()
     w.save_persist()
+
