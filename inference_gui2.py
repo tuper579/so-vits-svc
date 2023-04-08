@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import (QWidget,
    QApplication, QMainWindow,
    QFrame, QFileDialog, QLineEdit, QSlider,
    QPushButton, QHBoxLayout, QVBoxLayout, QLabel,
-   QPlainTextEdit, QComboBox, QGroupBox, QCheckBox, QShortcut)
+   QPlainTextEdit, QComboBox, QGroupBox, QCheckBox, QShortcut, QDialog)
 import numpy as np
 import soundfile
 import glob
@@ -152,6 +152,51 @@ chunks_dict = infer_tool.read_temp("inference/chunks_temp.json")
 infer_tool.mkdir(["raw", "results"])
 slice_db = -40  
 wav_format = 'wav'
+
+class SpeakerEmbeddingMixer(QDialog):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Speaker Embedding Mixer")
+        self.layout = QVBoxLayout(self)
+
+        self.speakers_frame = QFrame()
+        self.speakers_frame_layout = QHBoxLayout(self.speakers_frame)
+        self.layout.addWidget(self.speakers_frame)
+
+        self.speaker1_frame = QFrame()
+        self.speaker1_box = QComboBox()
+        self.speaker1_label = QLabel("Speaker 1")
+        self.speaker1_frame_layout = QVBoxLayout(self.speaker1_frame)
+        self.speaker1_frame_layout.addWidget(self.speaker1_box)
+        self.speaker1_frame_layout.addWidget(self.speaker1_label)
+
+        self.speaker2_frame = QFrame()
+        self.speaker2_box = QComboBox()
+        self.speaker2_label = QLabel("Speaker 2")
+        self.speaker2_frame_layout = QVBoxLayout(self.speaker2_frame)
+        self.speaker2_frame_layout.addWidget(self.speaker2_box)
+        self.speaker2_frame_layout.addWidget(self.speaker2_label)
+
+        self.layout.addWidget(self.speaker1_frame)
+        self.layout.addWidget(self.speaker2_frame)
+
+        for spk in self.speakers:
+            self.speaker1_box.addItem(spk["name"]+" ["+
+                Path(spk["model_folder"]).stem+"]")
+            self.speaker2_box.addItem(spk["name"]+" ["+
+                Path(spk["model_folder"]).stem+"]")
+
+        self.lerp_label = QLabel('lerp ratio')
+        self.lerp_num = QLineEdit('0')
+        self.lerp_num.setValidator(QDoubleValidator(0,1.0,1))
+        self.lerp_frame = FieldWidget(self.lerp_label, self.lerp_num)
+        self.speakers_frame_layout.addWidget(self.lerp_frame)
+
+        # Load
+        self.toggle_button = QPushButton("")
+
+        #self.layout.addWidget()
 
 class FieldWidget(QFrame):
     def __init__(self, label, field):
@@ -286,7 +331,8 @@ class AudioPreviewWidget(QWidget):
             return
 
         mime_data = QMimeData()
-        mime_data.setUrls([QUrl.fromLocalFile(self.local_file)])
+        mime_data.setUrls([QUrl.fromLocalFile(
+            os.path.abspath(self.local_file))])
         drag = QDrag(self)
         drag.setMimeData(mime_data)
         drag.exec_(Qt.CopyAction)
