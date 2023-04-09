@@ -243,7 +243,8 @@ def get_hubert_model(quiet=False):
   model.eval()
   return model
 
-def get_hubert_content(hmodel, wav_16k_tensor):
+def get_hubert_content(hmodel, wav_16k_tensor,
+    legacy_final_proj : bool = False):
   feats = wav_16k_tensor
   if feats.dim() == 2:  # double channels
     feats = feats.mean(-1)
@@ -253,12 +254,16 @@ def get_hubert_content(hmodel, wav_16k_tensor):
   inputs = {
     "source": feats.to(wav_16k_tensor.device),
     "padding_mask": padding_mask.to(wav_16k_tensor.device),
-    "output_layer": 9,  # layer 9
   }
   with torch.no_grad():
-    logits = hmodel.extract_features(**inputs)
-    feats = hmodel.final_proj(logits[0])
-  return feats.transpose(1, 2)
+    c = hmodel.extract_features(**inputs)[0]
+    if legacy_final_proj:
+        inputs["output_layer"] = 9
+        logger.warn("Using legacy_final_proj")
+        assert hasattr(hmodel, "final_proj")
+        assert isinstance(hmodel.final_proj, torch.nn.Module)
+        c = hmodel.final_proj(c)
+  return c.transpose(1, 2)
 
 
 def get_content(cmodel, y):
@@ -574,6 +579,9 @@ class HParams():
 
   def values(self):
     return self.__dict__.values()
+
+  def get(self, key: str, default = None):
+    return self.__dict__.get(key, default)
 
   def __len__(self):
     return len(self.__dict__)

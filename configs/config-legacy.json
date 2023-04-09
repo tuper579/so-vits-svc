@@ -33,8 +33,7 @@
     "win_length": 2048,
     "n_mel_channels": 80,
     "mel_fmin": 0.0,
-    "mel_fmax": 22050,
-    "contentvec_final_proj": false
+    "mel_fmax": 22050
   },
   "model": {
     "inter_channels": 192,

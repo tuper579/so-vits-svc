@@ -27,7 +27,8 @@ def process_one(filename, hmodel):
         devive = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         wav16k = librosa.resample(wav, orig_sr=sampling_rate, target_sr=16000)
         wav16k = torch.from_numpy(wav16k).to(devive)
-        c = sovits_utils.get_hubert_content(hmodel, wav_16k_tensor=wav16k)
+        c = sovits_utils.get_hubert_content(hmodel, wav_16k_tensor=wav16k, 
+            legacy_final_proj=hps.data.get("contentvec_final_proj", True))
         torch.save(c.cpu(), soft_path)
     f0_path = filename + ".f0.npy"
     if not os.path.exists(f0_path):
