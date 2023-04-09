@@ -71,6 +71,9 @@ The right UI panel allows for recording audio directly into the GUI for quick fi
 ### Cool features
 * You can drag and drop files from the audio preview by dragging from the play
   button, if a sound is present.
+* Speaker embedding mixing is supported for speakers within the same model file.
+  This feature is disabled by default as it seems to be quite temperamental, but
+  it can be enabled using the commandline switch `custom_merge`.
 
 ### Running with TalkNet 
 For TalkNet support, you need to `pip install requests` and also install this [ControllableTalkNet fork](https://github.com/effusiveperiscope/ControllableTalkNet). Instead of running `talknet_offline.py`, run `alt_server.py` (if you use a batch script or conda environment to run TalkNet, you should use it to run `alt_server.py`). This will start a server that can interface with Inference GUI 2. The TalkNet server should be started before Inference GUI 2.
