@@ -1,3 +1,4 @@
+import argparse
 import math
 import traceback
 import io
@@ -154,34 +155,38 @@ slice_db = -40
 wav_format = 'wav'
 
 class SpeakerEmbeddingMixer(QDialog):
-    def __init__(self):
+    sig_custom_model = pyqtSignal(dict)
+    def __init__(self, ui_par):
         super().__init__()
 
+        self.ui_parent = ui_par
         self.setWindowTitle("Speaker Embedding Mixer")
         self.layout = QVBoxLayout(self)
 
-        self.speakers_frame = QFrame()
-        self.speakers_frame_layout = QHBoxLayout(self.speakers_frame)
-        self.layout.addWidget(self.speakers_frame)
+        self.warn1_label = QLabel(
+            "Note: Merging speakers from different model files does not work "
+            "(?). Also, this can use a significant amount of RAM (~3GB)")
+        self.warn1_label.setWordWrap(True)
+        self.layout.addWidget(self.warn1_label)
 
         self.speaker1_frame = QFrame()
         self.speaker1_box = QComboBox()
         self.speaker1_label = QLabel("Speaker 1")
         self.speaker1_frame_layout = QVBoxLayout(self.speaker1_frame)
-        self.speaker1_frame_layout.addWidget(self.speaker1_box)
         self.speaker1_frame_layout.addWidget(self.speaker1_label)
+        self.speaker1_frame_layout.addWidget(self.speaker1_box)
 
         self.speaker2_frame = QFrame()
         self.speaker2_box = QComboBox()
         self.speaker2_label = QLabel("Speaker 2")
         self.speaker2_frame_layout = QVBoxLayout(self.speaker2_frame)
-        self.speaker2_frame_layout.addWidget(self.speaker2_box)
         self.speaker2_frame_layout.addWidget(self.speaker2_label)
+        self.speaker2_frame_layout.addWidget(self.speaker2_box)
 
         self.layout.addWidget(self.speaker1_frame)
         self.layout.addWidget(self.speaker2_frame)
 
-        for spk in self.speakers:
+        for spk in ui_par.speakers:
             self.speaker1_box.addItem(spk["name"]+" ["+
                 Path(spk["model_folder"]).stem+"]")
             self.speaker2_box.addItem(spk["name"]+" ["+
@@ -189,14 +194,68 @@ class SpeakerEmbeddingMixer(QDialog):
 
         self.lerp_label = QLabel('lerp ratio')
         self.lerp_num = QLineEdit('0')
-        self.lerp_num.setValidator(QDoubleValidator(0,1.0,1))
+        self.lerp_num.setValidator(QDoubleValidator(0,1.0,2))
         self.lerp_frame = FieldWidget(self.lerp_label, self.lerp_num)
-        self.speakers_frame_layout.addWidget(self.lerp_frame)
+        self.layout.addWidget(self.lerp_frame)
 
-        # Load
-        self.toggle_button = QPushButton("")
+        self.warn2_label = QLabel()
+        self.warn2_label.setWordWrap(True)
+        self.layout.addWidget(self.warn2_label)
 
-        #self.layout.addWidget()
+        self.load_button = QPushButton("Load lerp model")
+        self.load_button.clicked.connect(self.load_linear_interpolation)
+        self.layout.addWidget(self.load_button)
+
+    def load_linear_interpolation(self):
+        index1 = self.speaker1_box.currentIndex()
+        index2 = self.speaker2_box.currentIndex()
+
+        self.svc_model1 = Svc(
+            self.ui_parent.speakers[index1]["model_path"],
+            self.ui_parent.speakers[index1]["cfg_path"])
+        if (self.ui_parent.speakers[index2]["model_path"] !=
+            self.ui_parent.speakers[index1]["model_path"]):
+            self.warn2_label.setText("Cannot merge speakers from"
+                " different model files: "+
+                self.ui_parent.speakers[index1]["model_path"]+"+"+
+                self.ui_parent.speakers[index2]["model_path"])
+            return
+            #self.svc_model2 = Svc(
+                #self.ui_parent.speakers[index2]["model_path"],
+                #self.ui_parent.speakers[index2]["cfg_path"])
+        else:
+            self.svc_model2 = self.svc_model1
+        speaker_index1 = self.ui_parent.speakers[index1]["id"]
+        speaker_index2 = self.ui_parent.speakers[index2]["id"]
+
+        # gin_channels is 256 for all models.
+        g1 = self.svc_model1.net_g_ms.emb_g(
+            torch.LongTensor([speaker_index1])
+            .to(self.svc_model1.dev)
+            .unsqueeze(0))
+        g2 = self.svc_model2.net_g_ms.emb_g(
+            torch.LongTensor([speaker_index2])
+            .to(self.svc_model2.dev)
+            .unsqueeze(0))
+
+        self.svc_model1.net_g_ms.emb_g.weight.data[speaker_index1] = g1.lerp(
+            g2, float(self.lerp_num.text()))
+
+        output = { "merged_model": self.svc_model1,
+                  "merged_model_name": self.lerp_name(),
+                  "speaker_name": self.ui_parent.speakers[index1]["name"],
+                  "id": speaker_index1 }
+        self.sig_custom_model.emit(output)
+
+        if self.svc_model2 != self.svc_model1:
+            self.svc_model2 = None
+
+    def lerp_name(self):
+        index1 = self.speaker1_box.currentIndex()
+        index2 = self.speaker2_box.currentIndex()
+        return ("lin:"+self.ui_parent.speakers[index1]["name"]+
+                "|"+self.ui_parent.speakers[index2]["name"]+":"+
+                self.lerp_num.text())
 
 class FieldWidget(QFrame):
     def __init__(self, label, field):
@@ -654,7 +713,7 @@ class FileButton(QPushButton):
         pass
 
 class InferenceGui2 (QMainWindow):
-    def __init__(self):
+    def __init__(self, args):
         super().__init__()
 
         self.mic_state = False
@@ -692,8 +751,18 @@ class InferenceGui2 (QMainWindow):
         for spk in self.speakers:
             self.speaker_box.addItem(spk["name"]+" ["+
                 Path(spk["model_folder"]).stem+"]")
+        self.speaker_frame = QFrame()
+        self.speaker_frame_layout = QHBoxLayout(self.speaker_frame)
         self.speaker_label = QLabel("Speaker:")
-        self.sovits_lay.addWidget(self.speaker_label)
+        self.speaker_label.setWordWrap(True)
+        self.speaker_frame_layout.addWidget(self.speaker_label)
+
+        if args.custom_merge:
+            self.speaker_dialog_button = QPushButton("Speaker Mixing")
+            self.speaker_frame_layout.addWidget(self.speaker_dialog_button)
+            self.speaker_dialog_button.clicked.connect(self.speaker_mix_dialog)
+
+        self.sovits_lay.addWidget(self.speaker_frame)
         self.sovits_lay.addWidget(self.speaker_box)
         self.speaker_box.currentIndexChanged.connect(self.try_load_speaker)
 
@@ -1087,6 +1156,7 @@ class InferenceGui2 (QMainWindow):
 
         self.speaker = self.speakers[index]
         print ("Loading "+self.speakers[index]["name"])
+        self.speaker_label.setText("Speaker: "+self.speakers[index]["name"])
         self.cluster_path = self.speakers[index]["cluster_path"]
         if self.cluster_path == "":
             self.cluster_switch.setCheckState(False)
@@ -1099,6 +1169,26 @@ class InferenceGui2 (QMainWindow):
             self.svc_model = Svc(self.speakers[index]["model_path"],
                 self.speakers[index]["cfg_path"],
                 cluster_model_path=self.cluster_path)
+
+    def load_custom_speaker(self, speaker_dict):
+        self.svc_model = speaker_dict["merged_model"]
+        self.speaker = {
+            "model_path" : "custom",
+            "model_folder" : "custom",
+            "cluster_path" : "custom",
+            "cfg_path" : "custom",
+            "id" : speaker_dict["id"],
+            "name" : speaker_dict["speaker_name"] }
+        print("Interpolated speaker loaded: "+
+              speaker_dict["merged_model_name"])
+        self.speaker_label.setText("Speaker: "+
+            speaker_dict["merged_model_name"])
+        self.svc_model.hotload_cluster(self.cluster_path)
+
+    def speaker_mix_dialog(self):
+        dialog = SpeakerEmbeddingMixer(self)
+        dialog.sig_custom_model.connect(self.load_custom_speaker)
+        dialog.exec_()
 
     def cluster_model_dialog(self):
         file_tup = QFileDialog.getOpenFileName(self, "Cluster model file",
@@ -1314,10 +1404,16 @@ class InferenceGui2 (QMainWindow):
             traceback.print_exc()
         return res_paths
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    w = InferenceGui2()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--custom_merge", action="store_true",
+        help="Experimental support for weighted merge of"
+        " speakers within a model file")
+    args = parser.parse_args()
+
+    w = InferenceGui2(args)
     w.show()
     app.exec()
     w.save_persist()
