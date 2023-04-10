@@ -183,7 +183,8 @@ class Svc(object):
         c = sovits_utils.get_hubert_content(
             self.hubert_model,
             wav_16k_tensor=wav16k,
-            legacy_final_proj=self.hps_ms.get("contentvec_final_proj", True))
+            legacy_final_proj=self.hps_ms.data.get(
+                "contentvec_final_proj", True))
         c = sovits_utils.repeat_expand_2d(c.squeeze(0), f0.shape[1])
 
         if cluster_infer_ratio !=0:
