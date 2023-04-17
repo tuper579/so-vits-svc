@@ -1168,12 +1168,24 @@ class InferenceGui2 (QMainWindow):
         self.cluster_label.setText("Current cluster model: "+self.cluster_path)       
 
         if load_model:
-            self.svc_model = Svc(self.speakers[index]["model_path"],
+            new_svc_model = Svc(self.speakers[index]["model_path"],
                 self.speakers[index]["cfg_path"],
                 cluster_model_path=self.cluster_path)
+            self.transfer_model_state(self.svc_model, new_svc_model)
+            self.svc_model = new_svc_model
+
+    def transfer_model_state(self, source, target):
+        if source is None or target is None:
+            return
+        target.use_old_f0 = source.use_old_f0
+        target.use_crepe = source.use_crepe
+        target.quiet_mode = source.quiet_mode
+        target.voice_threshold = source.voice_threshold
 
     def load_custom_speaker(self, speaker_dict):
-        self.svc_model = speaker_dict["merged_model"]
+        new_svc_model = speaker_dict["merged_model"]
+        self.transfer_model_state(self.svc_model, new_svc_model)
+        self.svc_model = new_svc_model
         self.speaker = {
             "model_path" : "custom",
             "model_folder" : "custom",
