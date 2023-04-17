@@ -158,7 +158,8 @@ class Svc(object):
         f0_key = (zlib.adler32(bytes(wav)), self.voice_threshold,
             self.use_crepe, self.use_old_f0)
 
-        if f0_key in self.f0_cache:
+        #if f0_key in self.f0_cache:
+        if False:
             f0 = self.f0_cache[f0_key]
         elif self.use_crepe:
             f0 = sovits_utils.compute_f0_crepe(wav, sampling_rate=self.target_sample,
