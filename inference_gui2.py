@@ -826,7 +826,7 @@ class InferenceGui2 (QMainWindow):
         self.sovits_lay.addWidget(self.cluster_switch)
 
         self.noise_scale_label = QLabel("Noise scale")
-        self.noise_scale = QLineEdit('0.8')
+        self.noise_scale = QLineEdit('0.2')
         self.noise_scale.setValidator(self.cluster_ratio_validator)
 
         self.noise_frame = FieldWidget(
