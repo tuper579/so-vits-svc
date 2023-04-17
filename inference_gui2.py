@@ -913,10 +913,12 @@ class InferenceGui2 (QMainWindow):
             self.svc_model.use_old_f0 = True
             self.voice_threshold.setText('0.6')
             self.svc_model.voice_threshold = 0.6
+            self.update_voice_thresh()
         else:
             self.svc_model.use_old_f0 = False
             self.voice_threshold.setText('0.3')
             self.svc_model.voice_threshold = 0.3
+            self.update_voice_thresh()
 
     def update_voice_thresh(self):
         try:
