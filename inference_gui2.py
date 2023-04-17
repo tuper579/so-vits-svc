@@ -843,7 +843,7 @@ class InferenceGui2 (QMainWindow):
 
         self.thresh_label = QLabel("Voicing threshold")
         self.voice_validator = QDoubleValidator(0.1,0.9,1)
-        self.voice_threshold = QLineEdit('0.6')
+        self.voice_threshold = QLineEdit('0.3')
         self.voice_threshold.setValidator(self.voice_validator)
         self.voice_threshold.textChanged.connect(self.update_voice_thresh)
 
