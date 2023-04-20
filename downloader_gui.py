@@ -38,7 +38,7 @@ class FolderStrategy(DownloadStrategy):
         self.model_repo = huggingface_hub.Repository(
             local_dir=self.model_dir, clone_from=self.repo_id,
             skip_lfs_files=True)
-        self.model_repo.git_pull()
+        self.model_repo.git_pull(lfs=False)
         self.model_folders = os.listdir(model_dir)
         self.model_folders.remove('.git')
         self.model_folders.remove('.gitattributes')
@@ -56,10 +56,7 @@ class FolderStrategy(DownloadStrategy):
         gen_pt = next(x for x in os.listdir(basepath) if x.startswith("G_"))
         disc_pt = next(x for x in os.listdir(basepath) if x.startswith("D_"))
         cfg = next(x for x in os.listdir(basepath) if x.endswith("json"))
-        try:
-            clust = next(x for x in os.listdir(basepath) if x.endswith("pt"))
-        except StopIteration as e:
-            clust = None
+        clust = [x for x in os.listdir(basepath) if x.endswith("pt")]
 
         huggingface_hub.hf_hub_download(repo_id = self.repo_id,
             filename = model_name + "/" + gen_pt, local_dir = MODELS_DIR,
@@ -71,11 +68,12 @@ class FolderStrategy(DownloadStrategy):
                 filename = model_name + "/" + disc_pt, local_dir = MODELS_DIR,
                 cache_dir = './cache', local_dir_use_symlinks=False,
                 force_download=True)
-        if clust is not None:
-            huggingface_hub.hf_hub_download(repo_id = self.repo_id,
-                filename = model_name + "/" + clust, local_dir = MODELS_DIR,
-                    cache_dir = './cache', local_dir_use_symlinks=False,
-                    force_download=True)
+        if len(clust) != 0:
+            for c in clust:
+                huggingface_hub.hf_hub_download(repo_id = self.repo_id,
+                    filename = model_name + "/" + c, local_dir = MODELS_DIR,
+                        cache_dir = './cache', local_dir_use_symlinks=False,
+                        force_download=True)
         shutil.copy(os.path.join(basepath, cfg), os.path.join(targetpath, cfg))
 
 from zipfile import ZipFile
@@ -169,6 +167,8 @@ class DownloaderGui (QMainWindow):
         self.strategies = [
             FolderStrategy("therealvul/so-vits-svc-4.0",
                 "repositories/hf_vul_model"),
+            FolderStrategy("OlivineEllva/so-vits-svc-4.0-models",
+                "repositories/hf_oe_model"),
             ZipStrategy("Amo/so-vits-svc-4.0_GA",
                 "repositories/hf_amo_models"),
             ZipStrategy("HazySkies/SV3",
