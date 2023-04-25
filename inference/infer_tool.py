@@ -16,6 +16,7 @@ import parselmouth
 import soundfile
 import torch
 import torchaudio
+import pyworld
 
 import cluster
 from hubert import hubert_model
@@ -151,7 +152,8 @@ class Svc(object):
 
 
 
-    def get_unit_f0(self, in_path, tran, cluster_infer_ratio, speaker):
+    def get_unit_f0(self, in_path, tran, cluster_infer_ratio, speaker,
+            f0_method="harvest"):
 
         wav, sr = librosa.load(in_path, sr=self.target_sample)
 
@@ -161,17 +163,25 @@ class Svc(object):
         #if f0_key in self.f0_cache:
         if False:
             f0 = self.f0_cache[f0_key]
-        elif self.use_crepe:
-            f0 = sovits_utils.compute_f0_crepe(wav, sampling_rate=self.target_sample,
+        elif f0_method == "crepe":
+            f0 = sovits_utils.compute_f0_crepe(wav,
+                sampling_rate=self.target_sample,
                 hop_length=self.hop_size, voice_thresh=self.voice_threshold)
-            self.f0_cache[f0_key] = f0
-        elif self.use_old_f0:
-            f0 = sovits_utils.compute_f0_parselmouth(wav, sampling_rate=self.target_sample, hop_length=self.hop_size)
-            self.f0_cache[f0_key] = f0
-        else:
-            f0 = sovits_utils.compute_f0_parselmouth_alt(wav, sampling_rate=self.target_sample, hop_length=self.hop_size, voice_thresh=self.voice_threshold)
-            self.f0_cache[f0_key] = f0
+        elif f0_method == "parselmouth_old":
+            f0 = sovits_utils.compute_f0_parselmouth(wav,
+                sampling_rate=self.target_sample, hop_length=self.hop_size)
+        elif f0_method == "parselmouth_new":
+            f0 = sovits_utils.compute_f0_parselmouth_alt(wav,
+                sampling_rate=self.target_sample,
+                hop_length=self.hop_size, voice_thresh=self.voice_threshold)
+        elif f0_method == "dio":
+            f0 = sovits_utils.compute_f0_dio(wav, sampling_rate=
+                self.target_sample, hop_length=self.hop_size)
+        elif f0_method == "harvest": # preferred for low SNR
+            f0 = sovits_utils.compute_f0_harvest(wav, sampling_rate=
+                self.target_sample, hop_length=self.hop_size)
 
+        self.f0_cache[f0_key] = f0
         f0, uv = sovits_utils.interpolate_f0(f0)
         f0 = torch.FloatTensor(f0)
         uv = torch.FloatTensor(uv)
@@ -200,10 +210,12 @@ class Svc(object):
     def infer(self, speaker, tran, raw_path,
               cluster_infer_ratio=0,
               auto_predict_f0=False,
-              noice_scale=0.8):
+              noice_scale=0.8,
+              f0_method="harvest"):
         speaker_id = self.spk2id[speaker]
         sid = torch.LongTensor([int(speaker_id)]).to(self.dev).unsqueeze(0)
-        c, f0, uv = self.get_unit_f0(raw_path, tran, cluster_infer_ratio, speaker)
+        c, f0, uv = self.get_unit_f0(
+            raw_path, tran, cluster_infer_ratio, speaker, f0_method)
         if "half" in self.net_g_path and torch.cuda.is_available():
             c = c.half()
         with torch.no_grad():

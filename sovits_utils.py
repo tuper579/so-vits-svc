@@ -218,6 +218,22 @@ def compute_f0_dio(wav_numpy, p_len=None, sampling_rate=44100, hop_length=512):
         f0[index] = round(pitch, 1)
     return resize_f0(f0, p_len)
 
+def compute_f0_harvest(
+        wav_numpy, p_len=None, sampling_rate=44100, hop_length=512):
+    import pyworld
+    if p_len is None:
+        p_len = wav_numpy.shape[0]//hop_length
+    f0, t = pyworld.harvest(
+        wav_numpy.astype(np.double),
+        fs=sampling_rate,
+        f0_ceil=800,
+        frame_period=1000 * hop_length / sampling_rate,
+    )
+    f0 = pyworld.stonemask(wav_numpy.astype(np.double), f0, t, sampling_rate)
+    for index, pitch in enumerate(f0):
+        f0[index] = round(pitch, 1)
+    return resize_f0(f0, p_len)
+
 def f0_to_coarse(f0):
   is_torch = isinstance(f0, torch.Tensor)
   f0_mel = 1127 * (1 + f0 / 700).log() if is_torch else 1127 * np.log(1 + f0 / 700)

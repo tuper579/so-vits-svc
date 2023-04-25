@@ -52,12 +52,6 @@ else:
     "To enable: pip install pygame keyboard")
     PYGAME_AVAILABLE = False
 
-if (importlib.util.find_spec("tensorflow") and 
-    importlib.util.find_spec("crepe")):
-    CREPE_AVAILABLE = True
-else:
-    CREPE_AVAILABLE = False
-
 if importlib.util.find_spec("requests"):
     import requests
     REQUESTS_AVAILABLE = True
@@ -85,6 +79,14 @@ MODELS_DIR = "models"
 RECORD_DIR = "./recordings"
 JSON_NAME = "inference_gui2_persist.json"
 RECENT_DIR_MAXLEN = 10
+F0_OPTIONS = ["harvest", "dio", "parselmouth_new", "parselmouth_old"]
+
+if (importlib.util.find_spec("tensorflow") and 
+    importlib.util.find_spec("crepe")):
+    CREPE_AVAILABLE = True
+    F0_OPTIONS.append("crepe")
+else:
+    CREPE_AVAILABLE = False
     
 def get_speakers():
     speakers = []
@@ -833,24 +835,21 @@ class InferenceGui2 (QMainWindow):
             self.noise_scale_label, self.noise_scale)
         self.sovits_lay.addWidget(self.noise_frame)
 
-
         self.pred_switch = QCheckBox("Automatic f0 prediction (disable for singing)")
         self.sovits_lay.addWidget(self.pred_switch)
 
-        self.f0_switch = QCheckBox("Use old f0 detection for inference")
-        self.sovits_lay.addWidget(self.f0_switch)
-        self.f0_switch.stateChanged.connect(self.update_f0_switch)
+        self.f0_options = QComboBox()
+        for f in F0_OPTIONS:
+            self.f0_options.addItem(f)
+        self.sovits_lay.addWidget(QLabel("f0 options"))
+        self.sovits_lay.addWidget(self.f0_options)
+        self.f0_options.currentIndexChanged.connect(self.update_f0_switch)
 
         self.thresh_label = QLabel("Voicing threshold")
         self.voice_validator = QDoubleValidator(0.1,0.9,1)
         self.voice_threshold = QLineEdit('0.3')
         self.voice_threshold.setValidator(self.voice_validator)
         self.voice_threshold.textChanged.connect(self.update_voice_thresh)
-
-        if CREPE_AVAILABLE:
-            self.use_crepe = QCheckBox("Use crepe for f0 estimation")
-            self.use_crepe.stateChanged.connect(self.update_crepe)
-            self.sovits_lay.addWidget(self.use_crepe)
 
         self.thresh_frame = FieldWidget(self.thresh_label, self.voice_threshold)
         self.sovits_lay.addWidget(self.thresh_frame)
@@ -908,14 +907,13 @@ class InferenceGui2 (QMainWindow):
                 except PermissionError as e:
                     continue
         
-    def update_f0_switch(self):
-        if self.f0_switch.isChecked():
-            self.svc_model.use_old_f0 = True
+    def update_f0_switch(self, idx):
+        f0_option = F0_OPTIONS[idx]
+        if f0_option == "parselmouth_old":
             self.voice_threshold.setText('0.6')
             self.svc_model.voice_threshold = 0.6
             self.update_voice_thresh()
-        else:
-            self.svc_model.use_old_f0 = False
+        elif f0_option == "parselmouth_new":
             self.voice_threshold.setText('0.3')
             self.svc_model.voice_threshold = 0.3
             self.update_voice_thresh()
@@ -1177,8 +1175,6 @@ class InferenceGui2 (QMainWindow):
     def transfer_model_state(self, source, target):
         if source is None or target is None:
             return
-        target.use_old_f0 = source.use_old_f0
-        target.use_crepe = source.use_crepe
         target.quiet_mode = source.quiet_mode
         target.voice_threshold = source.voice_threshold
 
@@ -1282,9 +1278,6 @@ class InferenceGui2 (QMainWindow):
 
         # int(self.transpose_num.text())
 
-    def update_crepe(self):
-        self.svc_model.use_crepe = self.use_crepe.checkState()
-
     def save_persist(self):
         with open(JSON_NAME, "w") as f:
             o = {"recent_dirs": list(self.recent_dirs),
@@ -1294,7 +1287,7 @@ class InferenceGui2 (QMainWindow):
     def load_persist(self):
         if not os.path.exists(JSON_NAME):
             self.recent_dirs = []
-            self.output_dirs = "./results/"
+            self.output_dir = "./results/"
             self.talknet_addr = TALKNET_ADDR
             return
         with open(JSON_NAME, "r") as f:
@@ -1373,7 +1366,9 @@ class InferenceGui2 (QMainWindow):
                             self.speaker["name"], trans, raw_path,
                             cluster_infer_ratio = _cluster_ratio,
                             auto_predict_f0 = self.pred_switch.checkState(),
-                            noice_scale = float(self.noise_scale.text()))
+                            noice_scale = float(self.noise_scale.text()),
+                            f0_method = F0_OPTIONS[
+                                self.f0_options.currentIndex()])
                         _audio = out_audio.cpu().numpy()
                         pad_len = int(self.svc_model.target_sample * 0.5)
                         _audio = _audio[pad_len:-pad_len]
