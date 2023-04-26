@@ -87,7 +87,7 @@ class ZipStrategy(DownloadStrategy):
             local_dir=self.model_dir, clone_from=self.repo_id,
             skip_lfs_files=True, repo_type=("model" if is_model else "dataset")
             )
-        self.model_repo.git_pull()
+        self.model_repo.git_pull(lfs=False)
         self.model_zips = glob.glob(model_dir + "/**/*.zip", recursive=True)
 
         self.model_names = [Path(x).stem for x in self.model_zips]
